@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, MessageSquare, BookOpen, Brain, Settings } from "lucide-react";
+import { LayoutDashboard, MessageSquare, BookOpen, Brain, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -11,6 +12,8 @@ const navItems = [
 ];
 
 const AppLayout = () => {
+  const { signOut } = useAuth();
+
   return (
     <div className="flex min-h-screen bg-background bg-grid-pattern">
       {/* Ambient glow */}
@@ -44,6 +47,15 @@ const AppLayout = () => {
             </NavLink>
           ))}
         </nav>
+        <div className="p-3">
+          <button
+            onClick={signOut}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 w-full"
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <span className="hidden lg:block">Sign Out</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main content */}
