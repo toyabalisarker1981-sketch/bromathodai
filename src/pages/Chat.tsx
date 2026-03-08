@@ -8,49 +8,109 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  timestamp: Date;
 }
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
       role: "assistant",
-      content: "আসসালামু আলাইকুম! 👋 I'm your AI tutor. I can help you with Math, Science, English, and more. Ask me anything or upload an image for analysis!",
-      timestamp: new Date(),
+      content: "আসসালামু আলাইকুম! 👋 আমি তোমার AI টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি আপলোড করেও সাহায্য নিতে পারো। সব কিছু **সম্পূর্ণ ফ্রি**! 🎓",
     },
   ]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
+  const handleSend = async () => {
+    if (!input.trim() || isStreaming) return;
+    const userMsg: Message = { id: Date.now().toString(), role: "user", content: input };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInput("");
-    setIsTyping(true);
+    setIsStreaming(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
+    let assistantContent = "";
+
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to connect to AI");
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let streamDone = false;
+      const assistantId = (Date.now() + 1).toString();
+
+      // Add empty assistant message
+      setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              const currentContent = assistantContent;
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantId ? { ...m, content: currentContent } : m))
+              );
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      const errMsg: Message = {
+        id: (Date.now() + 2).toString(),
         role: "assistant",
-        content: "Great question! Let me show you with some math:\n\nThe **quadratic formula** is:\n\n$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$\n\nFor example, to solve $x^2 + 5x + 6 = 0$:\n\n- Here $a=1$, $b=5$, $c=6$\n- $x = \\frac{-5 \\pm \\sqrt{25-24}}{2} = \\frac{-5 \\pm 1}{2}$\n- So $x = -2$ or $x = -3$ ✅\n\nWould you like me to break it down further? 📚",
-        timestamp: new Date(),
+        content: "দুঃখিত, কিছু সমস্যা হয়েছে। আবার চেষ্টা করো! 🔄",
       };
-      setMessages((prev) => [...prev, aiMsg]);
-      setIsTyping(false);
-    }, 1500);
+      setMessages((prev) => [...prev, errMsg]);
+    }
+
+    setIsStreaming(false);
   };
 
   return (
@@ -62,7 +122,7 @@ const Chat = () => {
         </div>
         <div>
           <h1 className="font-display font-semibold text-sm">AI Tutor</h1>
-          <p className="text-xs text-muted-foreground">Powered by BRO MATHOD Ai</p>
+          <p className="text-xs text-muted-foreground">Powered by BRO MATHOD Ai — সম্পূর্ণ ফ্রি ✨</p>
         </div>
       </div>
 
@@ -105,7 +165,7 @@ const Chat = () => {
           ))}
         </AnimatePresence>
 
-        {isTyping && (
+        {isStreaming && messages[messages.length - 1]?.content === "" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
               <Bot className="w-4 h-4 text-primary" />
@@ -133,10 +193,11 @@ const Chat = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Ask your AI tutor anything..."
+              placeholder="যেকোনো প্রশ্ন করো..."
               className="flex-1 bg-transparent px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
+              disabled={isStreaming}
             />
-            <Button onClick={handleSend} variant="glow" size="icon" className="m-1 rounded-lg" disabled={!input.trim()}>
+            <Button onClick={handleSend} variant="glow" size="icon" className="m-1 rounded-lg" disabled={!input.trim() || isStreaming}>
               <Send className="w-4 h-4" />
             </Button>
           </div>
