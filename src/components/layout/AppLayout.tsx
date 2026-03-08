@@ -12,6 +12,8 @@ const navItems = [
 ];
 
 const AppLayout = () => {
+  const { signOut } = useAuth();
+
   return (
     <div className="flex min-h-screen bg-background bg-grid-pattern">
       {/* Ambient glow */}
