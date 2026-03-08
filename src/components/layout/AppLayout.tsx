@@ -47,6 +47,15 @@ const AppLayout = () => {
             </NavLink>
           ))}
         </nav>
+        <div className="p-3">
+          <button
+            onClick={signOut}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 w-full"
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <span className="hidden lg:block">Sign Out</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main content */}
