@@ -88,9 +88,13 @@ const Chat = () => {
                     : "glass-card rounded-bl-md"
                 }`}
               >
-                {msg.content.split("\n").map((line, i) => (
-                  <p key={i} className={i > 0 ? "mt-2" : ""}>{line}</p>
-                ))}
+                {msg.role === "assistant" ? (
+                  <ChatMessageContent content={msg.content} />
+                ) : (
+                  msg.content.split("\n").map((line, i) => (
+                    <p key={i} className={i > 0 ? "mt-2" : ""}>{line}</p>
+                  ))
+                )}
               </div>
               {msg.role === "user" && (
                 <div className="w-8 h-8 rounded-lg bg-secondary/15 flex items-center justify-center flex-shrink-0 mt-1">
