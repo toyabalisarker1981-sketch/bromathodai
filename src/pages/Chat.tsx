@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, ImagePlus, Bot, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ChatMessageContent from "@/components/chat/ChatMessageContent";
 
 interface Message {
   id: string;
