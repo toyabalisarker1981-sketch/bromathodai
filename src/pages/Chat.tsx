@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, ImagePlus, Bot, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ChatMessageContent from "@/components/chat/ChatMessageContent";
 
 interface Message {
   id: string;
@@ -44,7 +45,7 @@ const Chat = () => {
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "That's a great question! Let me explain...\n\nTo solve this, we need to consider the fundamental concepts. Would you like me to break it down step by step? 📚",
+        content: "Great question! Let me show you with some math:\n\nThe **quadratic formula** is:\n\n$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$\n\nFor example, to solve $x^2 + 5x + 6 = 0$:\n\n- Here $a=1$, $b=5$, $c=6$\n- $x = \\frac{-5 \\pm \\sqrt{25-24}}{2} = \\frac{-5 \\pm 1}{2}$\n- So $x = -2$ or $x = -3$ ✅\n\nWould you like me to break it down further? 📚",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMsg]);
@@ -87,9 +88,13 @@ const Chat = () => {
                     : "glass-card rounded-bl-md"
                 }`}
               >
-                {msg.content.split("\n").map((line, i) => (
-                  <p key={i} className={i > 0 ? "mt-2" : ""}>{line}</p>
-                ))}
+                {msg.role === "assistant" ? (
+                  <ChatMessageContent content={msg.content} />
+                ) : (
+                  msg.content.split("\n").map((line, i) => (
+                    <p key={i} className={i > 0 ? "mt-2" : ""}>{line}</p>
+                  ))
+                )}
               </div>
               {msg.role === "user" && (
                 <div className="w-8 h-8 rounded-lg bg-secondary/15 flex items-center justify-center flex-shrink-0 mt-1">
