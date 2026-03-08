@@ -45,7 +45,7 @@ const Chat = () => {
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "That's a great question! Let me explain...\n\nTo solve this, we need to consider the fundamental concepts. Would you like me to break it down step by step? 📚",
+        content: "Great question! Let me show you with some math:\n\nThe **quadratic formula** is:\n\n$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$\n\nFor example, to solve $x^2 + 5x + 6 = 0$:\n\n- Here $a=1$, $b=5$, $c=6$\n- $x = \\frac{-5 \\pm \\sqrt{25-24}}{2} = \\frac{-5 \\pm 1}{2}$\n- So $x = -2$ or $x = -3$ ✅\n\nWould you like me to break it down further? 📚",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMsg]);
