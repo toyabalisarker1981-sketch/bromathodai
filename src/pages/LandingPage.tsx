@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Brain, MessageSquare, BookOpen, Zap, Trophy, Shield, ArrowRight, Sparkles, Users, GraduationCap, Star, ChevronDown } from "lucide-react";
+import { motion } from "framer-motion";
+import { Brain, MessageSquare, BookOpen, Zap, Trophy, Shield, ArrowRight, Sparkles, Users, GraduationCap, Library, ChevronDown, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -9,50 +9,44 @@ const features = [
     icon: MessageSquare,
     title: "AI Tutor Chat",
     desc: "যেকোনো বিষয়ে প্রশ্ন করুন — গণিত, বিজ্ঞান, ইংরেজি। LaTeX সাপোর্ট সহ।",
-    descEn: "Ask anything — Math, Science, English. With LaTeX math rendering.",
     color: "primary",
   },
   {
     icon: BookOpen,
     title: "Notebook AI",
     desc: "YouTube, ওয়েব লিংক বা PDF থেকে স্ট্রাকচার্ড নোটস তৈরি করুন।",
-    descEn: "Generate structured study notes from YouTube, web links, or PDFs.",
     color: "secondary",
   },
   {
     icon: Brain,
     title: "Quiz & Exam Engine",
     desc: "MCQ ও সৃজনশীল প্রশ্ন তৈরি করুন। টাইমার ও নেগেটিভ মার্কিং সহ।",
-    descEn: "Generate MCQ & Creative Questions with timer and negative marking.",
     color: "primary",
   },
   {
-    icon: Trophy,
-    title: "Gamification & XP",
-    desc: "পড়াশোনা করে XP অর্জন করুন, লেভেল আপ করুন, অ্যাচিভমেন্ট আনলক করুন।",
-    descEn: "Earn XP, level up, and unlock achievements as you learn.",
+    icon: Library,
+    title: "ফ্রি লাইব্রেরী",
+    desc: "সকল ক্লাসের বই ও স্টাডি ম্যাটেরিয়াল সম্পূর্ণ বিনামূল্যে পড়ুন।",
     color: "secondary",
   },
   {
     icon: Sparkles,
     title: "Vision AI",
     desc: "ছবি আপলোড করুন — AI ছবি দেখে বিশ্লেষণ করবে ও সমাধান দেবে।",
-    descEn: "Upload images for AI-powered visual analysis and solutions.",
     color: "primary",
   },
   {
     icon: Shield,
     title: "১০০% ফ্রি",
     desc: "সকল ফিচার সম্পূর্ণ ফ্রি। কোনো হিডেন চার্জ নেই। চিরকাল ফ্রি।",
-    descEn: "All features completely free. No hidden charges. Free forever.",
     color: "secondary",
   },
 ];
 
 const stats = [
-  { value: "∞", label: "Unlimited AI Queries" },
+  { value: "∞", label: "Unlimited AI" },
   { value: "1-12", label: "Class Support" },
-  { value: "2", label: "Languages" },
+  { value: "📚", label: "Free Library" },
   { value: "100%", label: "Free Forever" },
 ];
 
@@ -61,18 +55,20 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background bg-grid-pattern relative overflow-x-hidden">
-      {/* Ambient glow */}
+      {/* Ambient glows */}
       <div className="fixed inset-0 pointer-events-none" style={{ background: "var(--gradient-glow)" }} />
+      <div className="fixed top-1/3 -left-32 w-96 h-96 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, hsla(155,60%,45%,0.08), transparent 70%)" }} />
+      <div className="fixed top-2/3 -right-32 w-96 h-96 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, hsla(235,55%,55%,0.08), transparent 70%)" }} />
 
       {/* Navbar */}
       <motion.nav
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-50 glass-card border-b border-border/50"
+        className="sticky top-0 z-50 border-b border-white/[0.06] bg-background/40 backdrop-blur-2xl"
       >
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center shadow-lg shadow-primary/10">
               <Brain className="w-5 h-5 text-primary" />
             </div>
             <span className="font-display text-lg font-bold gradient-text">BRO MATHOD Ai</span>
@@ -95,7 +91,7 @@ const LandingPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-card text-xs font-medium text-primary"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] backdrop-blur-md text-xs font-medium text-primary shadow-lg shadow-primary/5"
           >
             <Sparkles className="w-3.5 h-3.5" /> সম্পূর্ণ ফ্রি — সকল স্টুডেন্টদের জন্য
           </motion.div>
@@ -126,7 +122,7 @@ const LandingPage = () => {
             transition={{ delay: 0.4 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-3"
           >
-            <Button variant="glow" size="lg" onClick={() => navigate("/signup")} className="rounded-xl gap-2 text-base px-8">
+            <Button variant="glow" size="lg" onClick={() => navigate("/signup")} className="rounded-xl gap-2 text-base px-8 shadow-xl shadow-primary/20">
               এখনই শুরু করো — বিনামূল্যে <ArrowRight className="w-4 h-4" />
             </Button>
             <Button variant="glass" size="lg" onClick={() => navigate("/login")} className="rounded-xl gap-2 text-base px-8">
@@ -134,12 +130,7 @@ const LandingPage = () => {
             </Button>
           </motion.div>
 
-          {/* Scroll indicator */}
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="pt-8"
-          >
+          <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 2, repeat: Infinity }} className="pt-8">
             <ChevronDown className="w-5 h-5 text-muted-foreground mx-auto" />
           </motion.div>
         </div>
@@ -155,7 +146,7 @@ const LandingPage = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="glass-card rounded-2xl p-5 text-center"
+              className="rounded-2xl p-5 text-center border border-white/[0.06] bg-white/[0.02] backdrop-blur-xl shadow-lg shadow-black/10"
             >
               <p className="text-2xl md:text-3xl font-display font-bold gradient-text">{stat.value}</p>
               <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
@@ -167,12 +158,7 @@ const LandingPage = () => {
       {/* Features */}
       <section className="px-4 pb-20">
         <div className="max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
+          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-display font-bold">
               সকল ফিচার <span className="gradient-text">এক জায়গায়</span>
             </h2>
@@ -187,9 +173,9 @@ const LandingPage = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
-                className="glass-card-hover rounded-2xl p-6 space-y-4"
+                className="rounded-2xl p-6 space-y-4 border border-white/[0.06] bg-white/[0.02] backdrop-blur-xl hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1"
               >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${f.color === "primary" ? "bg-primary/15 text-primary" : "bg-secondary/15 text-secondary"}`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg ${f.color === "primary" ? "bg-primary/15 text-primary shadow-primary/10" : "bg-secondary/15 text-secondary shadow-secondary/10"}`}>
                   <f.icon className="w-6 h-6" />
                 </div>
                 <div>
@@ -208,25 +194,25 @@ const LandingPage = () => {
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="max-w-3xl mx-auto glass-card rounded-3xl p-8 md:p-12 text-center space-y-6 gradient-border"
+          className="max-w-3xl mx-auto rounded-3xl p-8 md:p-12 text-center space-y-6 border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl shadow-2xl shadow-primary/5 gradient-border"
         >
-          <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center mx-auto shadow-xl shadow-primary/15">
             <GraduationCap className="w-8 h-8 text-primary" />
           </div>
           <h2 className="text-2xl md:text-3xl font-display font-bold">
             আজই শুরু করো তোমার <span className="gradient-text">AI Learning Journey</span>
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            BRO MATHOD Ai তোমাকে দেবে একজন world-class private tutor এর সমান সুবিধা — সম্পূর্ণ বিনামূল্যে। NCTB কারিকুলামের ক্লাস ১-১২ এর সকল বিষয়ে সাহায্য পাও।
+            BRO MATHOD Ai তোমাকে দেবে একজন world-class private tutor এর সমান সুবিধা — সম্পূর্ণ বিনামূল্যে।
           </p>
-          <Button variant="glow" size="lg" onClick={() => navigate("/signup")} className="rounded-xl gap-2 text-base px-8">
+          <Button variant="glow" size="lg" onClick={() => navigate("/signup")} className="rounded-xl gap-2 text-base px-8 shadow-xl shadow-primary/20">
             <Users className="w-4 h-4" /> ফ্রি অ্যাকাউন্ট তৈরি করো
           </Button>
         </motion.div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border/50 px-4 py-8">
+      <footer className="border-t border-white/[0.06] bg-background/40 backdrop-blur-xl px-4 py-8">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Brain className="w-4 h-4 text-primary" />

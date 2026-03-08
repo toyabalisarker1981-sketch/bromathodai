@@ -13,6 +13,7 @@ import Onboarding from "@/pages/Onboarding";
 import Dashboard from "@/pages/Dashboard";
 import Chat from "@/pages/Chat";
 import Notebook from "@/pages/Notebook";
+import Library from "@/pages/Library";
 import Quiz from "@/pages/Quiz";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/notebook" element={<Notebook />} />
+              <Route path="/library" element={<Library />} />
               <Route path="/quiz" element={<Quiz />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
