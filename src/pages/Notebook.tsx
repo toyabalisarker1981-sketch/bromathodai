@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, Youtube, Globe, FileText, Plus, Sparkles, Upload, Trash2, Image, Loader2 } from "lucide-react";
+import { BookOpen, Youtube, Globe, FileText, Sparkles, Upload, Trash2, Image, Loader2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import ChatMessageContent from "@/components/chat/ChatMessageContent";
 
 type SourceType = "youtube" | "web" | "pdf" | "image";
 
@@ -25,9 +26,11 @@ interface Note {
   created_at: string;
 }
 
+const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-notes`;
+
 const Notebook = () => {
   const { user } = useAuth();
-  const [selectedSource, setSelectedSource] = useState<SourceType>("youtube");
+  const [selectedSource, setSelectedSource] = useState<SourceType>("pdf");
   const [url, setUrl] = useState("");
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,7 +45,7 @@ const Notebook = () => {
   const fetchNotes = async () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("notes")
       .select("*")
       .eq("user_id", user.id)
@@ -51,17 +54,32 @@ const Notebook = () => {
     setLoading(false);
   };
 
+  const generateAINotes = async (fileUrl: string, fileName: string, sourceType: string): Promise<string> => {
+    try {
+      const resp = await fetch(GENERATE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ fileUrl, fileName, sourceType }),
+      });
+      if (!resp.ok) throw new Error("AI notes generation failed");
+      const data = await resp.json();
+      return data.content;
+    } catch (e) {
+      console.error("AI notes error:", e);
+      return `# 📝 ${fileName}\n\nনোট তৈরি করা যায়নি। পরে আবার চেষ্টা করো।`;
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      toast({ title: "ফাইল অনেক বড়", description: "সর্বোচ্চ ১০ MB ফাইল আপলোড করা যাবে", variant: "destructive" });
-      return;
-    }
-
     setGenerating(true);
+    toast({ title: "আপলোড হচ্ছে... ⏳", description: "ফাইল আপলোড এবং AI নোট তৈরি হচ্ছে" });
+
     const ext = file.name.split(".").pop();
     const filePath = `${user.id}/${Date.now()}.${ext}`;
 
@@ -76,19 +94,23 @@ const Notebook = () => {
     }
 
     const { data: urlData } = supabase.storage.from("notebook-uploads").getPublicUrl(filePath);
+    const fileName = file.name.replace(/\.[^/.]+$/, "");
+
+    // Generate AI notes
+    const aiContent = await generateAINotes(urlData.publicUrl, fileName, selectedSource);
 
     const { error: insertError } = await supabase.from("notes").insert({
       user_id: user.id,
-      title: file.name.replace(/\.[^/.]+$/, ""),
+      title: fileName,
       source_type: selectedSource,
       file_path: urlData.publicUrl,
-      content: `ফাইল আপলোড সম্পন্ন: ${file.name}\n\nAI দিয়ে এই ফাইল থেকে নোটস তৈরি করতে AI Tutor এ যাও এবং ফাইলের বিষয়বস্তু সম্পর্কে প্রশ্ন করো।`,
+      content: aiContent,
     });
 
     if (insertError) {
       toast({ title: "সেভ ব্যর্থ", description: insertError.message, variant: "destructive" });
     } else {
-      toast({ title: "সফল! ✅", description: "ফাইল আপলোড এবং নোট তৈরি হয়েছে" });
+      toast({ title: "নোট তৈরি হয়েছে! ✅", description: "AI হ্যান্ড নোট প্রস্তুত" });
       fetchNotes();
     }
     setGenerating(false);
@@ -99,18 +121,20 @@ const Notebook = () => {
     if (!url.trim() || !user) return;
     setGenerating(true);
 
+    const aiContent = await generateAINotes(url, selectedSource === "youtube" ? "YouTube ভিডিও" : "ওয়েব পেজ", selectedSource);
+
     const { error } = await supabase.from("notes").insert({
       user_id: user.id,
       title: selectedSource === "youtube" ? "YouTube থেকে নোটস" : "ওয়েব থেকে নোটস",
       source_type: selectedSource,
       source_url: url,
-      content: `সোর্স: ${url}\n\nAI দিয়ে এই লিংক থেকে নোটস তৈরি করতে AI Tutor এ যাও এবং এই URL শেয়ার করো।`,
+      content: aiContent,
     });
 
     if (error) {
       toast({ title: "ত্রুটি", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "নোট সেভ হয়েছে! ✅" });
+      toast({ title: "AI নোট তৈরি হয়েছে! ✅" });
       setUrl("");
       fetchNotes();
     }
@@ -132,8 +156,7 @@ const Notebook = () => {
     if (mins < 60) return `${mins} মিনিট আগে`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours} ঘন্টা আগে`;
-    const days = Math.floor(hours / 24);
-    return `${days} দিন আগে`;
+    return `${Math.floor(hours / 24)} দিন আগে`;
   };
 
   return (
@@ -142,7 +165,7 @@ const Notebook = () => {
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <BookOpen className="w-6 h-6 text-primary" /> নোটবুক AI
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">যেকোনো সোর্স থেকে নোটস তৈরি করো — সব ফ্রি!</p>
+        <p className="text-sm text-muted-foreground mt-1">PDF বা ছবি আপলোড করো — AI অটোমেটিক হ্যান্ড নোট তৈরি করবে! ✨</p>
       </motion.div>
 
       {/* Source selector */}
@@ -174,13 +197,20 @@ const Notebook = () => {
               onChange={handleFileUpload}
               className="hidden"
               id="file-upload"
+              disabled={generating}
             />
             <label
               htmlFor="file-upload"
-              className="flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed border-border/50 rounded-xl cursor-pointer hover:border-primary/40 transition-colors bg-muted/10"
+              className={`flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed border-border/50 rounded-xl cursor-pointer hover:border-primary/40 transition-colors bg-muted/10 ${generating ? "pointer-events-none opacity-60" : ""}`}
             >
               {generating ? (
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                <div className="text-center space-y-3">
+                  <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
+                  <div>
+                    <p className="text-sm font-medium text-primary">AI নোট তৈরি হচ্ছে...</p>
+                    <p className="text-xs text-muted-foreground mt-1">এতে কিছুক্ষণ সময় লাগতে পারে</p>
+                  </div>
+                </div>
               ) : (
                 <>
                   <Upload className="w-8 h-8 text-muted-foreground" />
@@ -188,7 +218,7 @@ const Notebook = () => {
                     <p className="text-sm font-medium">
                       {selectedSource === "pdf" ? "PDF ফাইল আপলোড করো" : "ছবি আপলোড করো"}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">সর্বোচ্চ ১০ MB</p>
+                    <p className="text-xs text-muted-foreground mt-1">আনলিমিটেড সাইজ — AI অটোমেটিক নোট তৈরি করবে 🤖</p>
                   </div>
                 </>
               )}
@@ -205,7 +235,7 @@ const Notebook = () => {
             />
             <Button variant="glow" className="gap-2 rounded-xl" onClick={handleGenerate} disabled={generating || !url.trim()}>
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              সেভ করো
+              নোট তৈরি করো
             </Button>
           </div>
         )}
@@ -213,18 +243,14 @@ const Notebook = () => {
 
       {/* Notes list */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display font-semibold text-sm">তোমার নোটস ({notes.length})</h2>
-        </div>
+        <h2 className="font-display font-semibold text-sm">তোমার নোটস ({notes.length})</h2>
 
         {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 text-primary animate-spin" />
-          </div>
+          <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>
         ) : notes.length === 0 ? (
           <div className="glass-card rounded-2xl p-8 text-center">
             <BookOpen className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">এখনো কোনো নোটস নেই। উপরের অপশন থেকে নতুন নোট তৈরি করো!</p>
+            <p className="text-sm text-muted-foreground">এখনো কোনো নোটস নেই। PDF আপলোড করো — AI নোট তৈরি করবে!</p>
           </div>
         ) : (
           <AnimatePresence>
@@ -235,38 +261,48 @@ const Notebook = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ delay: i * 0.03 }}
-                className={`glass-card-hover rounded-xl p-4 cursor-pointer ${selectedNote?.id === note.id ? "border-primary/30" : ""}`}
-                onClick={() => setSelectedNote(selectedNote?.id === note.id ? null : note)}
+                className={`glass-card rounded-xl overflow-hidden ${selectedNote?.id === note.id ? "border-primary/30" : ""}`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold truncate">{note.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {note.source_type === "youtube" ? "🎬 YouTube" : note.source_type === "web" ? "🌐 ওয়েব" : note.source_type === "pdf" ? "📄 PDF" : "🖼️ ছবি"} · {timeAgo(note.created_at)}
-                    </p>
+                <div
+                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                  onClick={() => setSelectedNote(selectedNote?.id === note.id ? null : note)}
+                >
+                  <div className="flex-1 min-w-0 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      {note.source_type === "pdf" ? <FileText className="w-4 h-4 text-primary" /> :
+                       note.source_type === "image" ? <Image className="w-4 h-4 text-primary" /> :
+                       note.source_type === "youtube" ? <Youtube className="w-4 h-4 text-primary" /> :
+                       <Globe className="w-4 h-4 text-primary" />}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold truncate">{note.title}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">{timeAgo(note.created_at)}</p>
+                    </div>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(note.id); }}
-                    className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-muted-foreground" />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(note.id); }}
+                      className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
+
                 {selectedNote?.id === note.id && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-3 pt-3 border-t border-border/30">
-                    {note.file_path && (
-                      <div className="mb-3">
-                        {note.source_type === "image" ? (
-                          <img src={note.file_path} alt={note.title} className="rounded-lg max-h-48 object-cover" />
-                        ) : (
-                          <a href={note.file_path} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline">📎 ফাইল দেখো</a>
-                        )}
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="px-4 pb-4">
+                    <div className="border-t border-border/30 pt-4">
+                      {note.file_path && note.source_type === "image" && (
+                        <img src={note.file_path} alt={note.title} className="rounded-lg max-h-48 object-cover mb-4" />
+                      )}
+                      {note.source_url && (
+                        <a href={note.source_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline mb-3 block">🔗 সোর্স লিংক</a>
+                      )}
+                      <div className="glass-card rounded-xl p-4">
+                        <ChatMessageContent content={note.content || ""} />
                       </div>
-                    )}
-                    {note.source_url && (
-                      <a href={note.source_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline mb-2 block">🔗 সোর্স লিংক</a>
-                    )}
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{note.content}</p>
+                    </div>
                   </motion.div>
                 )}
               </motion.div>

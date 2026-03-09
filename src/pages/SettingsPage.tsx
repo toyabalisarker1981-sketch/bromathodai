@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Settings, User, GraduationCap, Languages, Save, Check, Shield } from "lucide-react";
+import { Settings, User, GraduationCap, Languages, Save, Check, Shield, LogOut, Mail, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const SettingsPage = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [studentClass, setStudentClass] = useState("");
   const [language, setLanguage] = useState("bn");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -46,10 +49,21 @@ const SettingsPage = () => {
       toast({ title: "সেভ ব্যর্থ", description: error.message, variant: "destructive" });
     } else {
       setSaved(true);
+      setEditing(false);
       toast({ title: "সেটিংস সেভ হয়েছে! ✅" });
       setTimeout(() => setSaved(false), 2000);
     }
     setSaving(false);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/landing");
+  };
+
+  const classLabel = (cls: string) => {
+    if (cls === "13") return "HSC+";
+    return `ক্লাস ${cls}`;
   };
 
   return (
@@ -61,95 +75,114 @@ const SettingsPage = () => {
         <p className="text-sm text-muted-foreground mt-1">তোমার প্রোফাইল এবং পছন্দ পরিবর্তন করো</p>
       </motion.div>
 
-      {/* Profile Info */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-2xl p-5 space-y-4">
-        <h2 className="font-display font-semibold text-sm flex items-center gap-2">
-          <User className="w-4 h-4 text-primary" /> প্রোফাইল তথ্য
-        </h2>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">পুরো নাম</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="তোমার নাম লেখো..."
-              className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
-            />
+      {/* Profile Card */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display font-semibold text-sm flex items-center gap-2">
+            <User className="w-4 h-4 text-primary" /> প্রোফাইল তথ্য
+          </h2>
+          <button onClick={() => setEditing(!editing)} className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+            <Edit3 className="w-3 h-3" /> {editing ? "বাতিল" : "এডিট করো"}
+          </button>
+        </div>
+
+        {!editing ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/20">
+              <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center">
+                <User className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">{fullName || "নাম সেট করো"}</p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" /> {user?.email}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-muted/20">
+                <p className="text-xs text-muted-foreground">ক্লাস</p>
+                <p className="text-sm font-semibold mt-0.5">{studentClass ? classLabel(studentClass) : "সেট করো"}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-muted/20">
+                <p className="text-xs text-muted-foreground">ভাষা</p>
+                <p className="text-sm font-semibold mt-0.5">{language === "bn" ? "বাংলা 🇧🇩" : "English 🇬🇧"}</p>
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">ইমেইল</label>
-            <input
-              type="text"
-              value={user?.email || ""}
-              disabled
-              className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 text-muted-foreground opacity-60"
-            />
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">পুরো নাম</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="তোমার নাম লেখো..."
+                className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">ইমেইল</label>
+              <input type="text" value={user?.email || ""} disabled className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 text-muted-foreground opacity-60" />
+            </div>
           </div>
-        </div>
+        )}
       </motion.div>
 
-      {/* Class Selection */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="glass-card rounded-2xl p-5 space-y-4">
-        <h2 className="font-display font-semibold text-sm flex items-center gap-2">
-          <GraduationCap className="w-4 h-4 text-secondary" /> ক্লাস
-        </h2>
-        <div className="grid grid-cols-5 gap-2">
-          {[6, 7, 8, 9, 10].map((cls) => (
-            <button
-              key={cls}
-              onClick={() => setStudentClass(cls.toString())}
-              className={`py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                studentClass === cls.toString()
-                  ? "bg-primary/15 text-primary border border-primary/30"
-                  : "bg-muted/30 text-muted-foreground hover:text-foreground border border-transparent"
-              }`}
-            >
-              {cls}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {[11, 12, "HSC"].map((cls) => (
-            <button
-              key={cls.toString()}
-              onClick={() => setStudentClass(cls === "HSC" ? "13" : cls.toString())}
-              className={`py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                studentClass === (cls === "HSC" ? "13" : cls.toString())
-                  ? "bg-primary/15 text-primary border border-primary/30"
-                  : "bg-muted/30 text-muted-foreground hover:text-foreground border border-transparent"
-              }`}
-            >
-              {cls === "HSC" ? "HSC+" : `${cls}`}
-            </button>
-          ))}
-        </div>
-      </motion.div>
+      {/* Class Selection - only in edit mode */}
+      {editing && (
+        <>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-5 space-y-4">
+            <h2 className="font-display font-semibold text-sm flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-secondary" /> ক্লাস
+            </h2>
+            <div className="grid grid-cols-5 gap-2">
+              {[1, 2, 3, 4, 5].map((cls) => (
+                <button key={cls} onClick={() => setStudentClass(cls.toString())}
+                  className={`py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    studentClass === cls.toString() ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground hover:text-foreground border border-transparent"
+                  }`}>{cls}</button>
+              ))}
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {[6, 7, 8, 9, 10].map((cls) => (
+                <button key={cls} onClick={() => setStudentClass(cls.toString())}
+                  className={`py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    studentClass === cls.toString() ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground hover:text-foreground border border-transparent"
+                  }`}>{cls}</button>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[11, 12, "HSC"].map((cls) => (
+                <button key={cls.toString()} onClick={() => setStudentClass(cls === "HSC" ? "13" : cls.toString())}
+                  className={`py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    studentClass === (cls === "HSC" ? "13" : cls.toString()) ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground hover:text-foreground border border-transparent"
+                  }`}>{cls === "HSC" ? "HSC+" : `${cls}`}</button>
+              ))}
+            </div>
+          </motion.div>
 
-      {/* Language */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card rounded-2xl p-5 space-y-4">
-        <h2 className="font-display font-semibold text-sm flex items-center gap-2">
-          <Languages className="w-4 h-4 text-primary" /> ভাষা
-        </h2>
-        <div className="flex gap-2">
-          {[{ val: "bn", label: "বাংলা 🇧🇩" }, { val: "en", label: "English 🇬🇧" }].map((lang) => (
-            <button
-              key={lang.val}
-              onClick={() => setLanguage(lang.val)}
-              className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                language === lang.val
-                  ? "bg-primary/15 text-primary border border-primary/30"
-                  : "bg-muted/30 text-muted-foreground hover:text-foreground border border-transparent"
-              }`}
-            >
-              {lang.label}
-            </button>
-          ))}
-        </div>
-      </motion.div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-5 space-y-4">
+            <h2 className="font-display font-semibold text-sm flex items-center gap-2">
+              <Languages className="w-4 h-4 text-primary" /> ভাষা
+            </h2>
+            <div className="flex gap-2">
+              {[{ val: "bn", label: "বাংলা 🇧🇩" }, { val: "en", label: "English 🇬🇧" }].map((lang) => (
+                <button key={lang.val} onClick={() => setLanguage(lang.val)}
+                  className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    language === lang.val ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground hover:text-foreground border border-transparent"
+                  }`}>{lang.label}</button>
+              ))}
+            </div>
+          </motion.div>
 
-      {/* Free info */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="glass-card rounded-2xl p-5">
+          <Button variant="glow" className="w-full rounded-xl gap-2" onClick={handleSave} disabled={saving}>
+            {saved ? <><Check className="w-4 h-4" /> সেভ হয়েছে!</> : <><Save className="w-4 h-4" /> সেভ করো</>}
+          </Button>
+        </>
+      )}
+
+      {/* Free Plan */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card rounded-2xl p-5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
             <Shield className="w-5 h-5 text-primary" />
@@ -161,9 +194,12 @@ const SettingsPage = () => {
         </div>
       </motion.div>
 
-      <Button variant="glow" className="w-full rounded-xl gap-2" onClick={handleSave} disabled={saving}>
-        {saved ? <><Check className="w-4 h-4" /> সেভ হয়েছে!</> : <><Save className="w-4 h-4" /> সেভ করো</>}
-      </Button>
+      {/* Sign Out */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+        <Button variant="outline" className="w-full rounded-xl gap-2 border-destructive/30 text-destructive hover:bg-destructive/10" onClick={handleSignOut}>
+          <LogOut className="w-4 h-4" /> সাইন আউট
+        </Button>
+      </motion.div>
     </div>
   );
 };
