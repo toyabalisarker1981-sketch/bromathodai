@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, ImagePlus, Bot, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatMessageContent from "@/components/chat/ChatMessageContent";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -13,16 +15,30 @@ interface Message {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 const Chat = () => {
+  const { user } = useAuth();
+  const [studentClass, setStudentClass] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
       role: "assistant",
-      content: "আসসালামু আলাইকুম! 👋 আমি তোমার AI টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি আপলোড করেও সাহায্য নিতে পারো। সব কিছু **সম্পূর্ণ ফ্রি**! 🎓",
+      content: "আসসালামু আলাইকুম! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! সব কিছু **সম্পূর্ণ ফ্রি**! 🎓",
     },
   ]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("student_class")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.student_class) setStudentClass(data.student_class.toString());
+      });
+  }, [user]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -47,6 +63,7 @@ const Chat = () => {
         },
         body: JSON.stringify({
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+          studentClass,
         }),
       });
 
@@ -61,7 +78,6 @@ const Chat = () => {
       let streamDone = false;
       const assistantId = (Date.now() + 1).toString();
 
-      // Add empty assistant message
       setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
       while (!streamDone) {
@@ -79,20 +95,15 @@ const Chat = () => {
           if (!line.startsWith("data: ")) continue;
 
           const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") {
-            streamDone = true;
-            break;
-          }
+          if (jsonStr === "[DONE]") { streamDone = true; break; }
 
           try {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
               assistantContent += content;
-              const currentContent = assistantContent;
-              setMessages((prev) =>
-                prev.map((m) => (m.id === assistantId ? { ...m, content: currentContent } : m))
-              );
+              const cur = assistantContent;
+              setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, content: cur } : m)));
             }
           } catch {
             textBuffer = line + "\n" + textBuffer;
@@ -102,12 +113,11 @@ const Chat = () => {
       }
     } catch (e) {
       console.error(e);
-      const errMsg: Message = {
+      setMessages((prev) => [...prev, {
         id: (Date.now() + 2).toString(),
         role: "assistant",
         content: "দুঃখিত, কিছু সমস্যা হয়েছে। আবার চেষ্টা করো! 🔄",
-      };
-      setMessages((prev) => [...prev, errMsg]);
+      }]);
     }
 
     setIsStreaming(false);
@@ -115,18 +125,16 @@ const Chat = () => {
 
   return (
     <div className="flex flex-col h-screen md:h-screen">
-      {/* Header */}
       <div className="glass-card border-b border-border/50 p-4 flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
           <Sparkles className="w-4 h-4 text-primary" />
         </div>
         <div>
-          <h1 className="font-display font-semibold text-sm">AI Tutor</h1>
-          <p className="text-xs text-muted-foreground">Powered by BRO MATHOD Ai — সম্পূর্ণ ফ্রি ✨</p>
+          <h1 className="font-display font-semibold text-sm">AI বন্ধু-টিউটর</h1>
+          <p className="text-xs text-muted-foreground">তোমার পড়ালেখার সেরা বন্ধু — সম্পূর্ণ ফ্রি ✨</p>
         </div>
       </div>
 
-      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hidden">
         <AnimatePresence>
           {messages.map((msg) => (
@@ -141,13 +149,11 @@ const Chat = () => {
                   <Bot className="w-4 h-4 text-primary" />
                 </div>
               )}
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-md"
-                    : "glass-card rounded-bl-md"
-                }`}
-              >
+              <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                msg.role === "user"
+                  ? "bg-primary text-primary-foreground rounded-br-md"
+                  : "glass-card rounded-bl-md"
+              }`}>
                 {msg.role === "assistant" ? (
                   <ChatMessageContent content={msg.content} />
                 ) : (
@@ -181,7 +187,6 @@ const Chat = () => {
         )}
       </div>
 
-      {/* Input */}
       <div className="p-4 glass-card border-t border-border/50">
         <div className="flex items-center gap-2 max-w-3xl mx-auto">
           <Button variant="glass" size="icon" className="flex-shrink-0 rounded-xl">
