@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Clock, Target, Zap, Play, CheckCircle2, XCircle, Loader2, BookOpen, Upload, Youtube, Globe, FileText, Image, ArrowLeft, Sparkles } from "lucide-react";
+import { Brain, Target, Play, CheckCircle2, XCircle, Loader2, Upload, Youtube, Globe, FileText, Image, ArrowLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,17 +14,6 @@ interface QuizQuestion {
   explanation: string;
 }
 
-const NCTB_SUBJECTS: Record<string, string[]> = {
-  "গণিত": ["সংখ্যা পদ্ধতি", "বীজগণিত", "জ্যামিতি", "পরিমিতি", "ত্রিকোণমিতি", "পরিসংখ্যান"],
-  "পদার্থবিজ্ঞান": ["গতি", "বল", "কাজ ও শক্তি", "তাপ", "আলো", "শব্দ", "বিদ্যুৎ", "চুম্বক"],
-  "রসায়ন": ["পদার্থের গঠন", "পর্যায় সারণি", "রাসায়নিক বন্ধন", "এসিড-ক্ষার", "জৈব রসায়ন"],
-  "জীববিজ্ঞান": ["কোষ", "জীবের বৈচিত্র্য", "উদ্ভিদবিদ্যা", "প্রাণিবিদ্যা", "জেনেটিক্স", "বাস্তুবিদ্যা"],
-  "ইংরেজি": ["Grammar", "Vocabulary", "Tense", "Parts of Speech", "Comprehension"],
-  "বাংলা": ["ব্যাকরণ", "সাহিত্য", "রচনা", "পত্র লিখন"],
-  "সাধারণ বিজ্ঞান": ["পদার্থ", "শক্তি", "পরিবেশ", "স্বাস্থ্য", "প্রযুক্তি"],
-  "তথ্য ও যোগাযোগ প্রযুক্তি": ["কম্পিউটার", "ইন্টারনেট", "প্রোগ্রামিং", "ডেটাবেজ"],
-};
-
 const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quiz`;
 
 type QuizMode = "select" | "subject" | "custom" | "generating" | "quiz" | "result";
@@ -32,8 +21,10 @@ type QuizMode = "select" | "subject" | "custom" | "generating" | "quiz" | "resul
 const Quiz = () => {
   const { user } = useAuth();
   const [mode, setMode] = useState<QuizMode>("select");
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [selectedTopic, setSelectedTopic] = useState("");
+  const [subjectInput, setSubjectInput] = useState("");
+  const [topicInput, setTopicInput] = useState("");
+  const [questionCountInput, setQuestionCountInput] = useState("5");
+  const [customQuestionCount, setCustomQuestionCount] = useState("5");
   const [studentClass, setStudentClass] = useState("9");
   const [customUrl, setCustomUrl] = useState("");
   const [customSource, setCustomSource] = useState<"pdf" | "image" | "youtube" | "web">("youtube");
@@ -51,9 +42,11 @@ const Quiz = () => {
       .then(({ data }) => { if (data?.student_class) setStudentClass(data.student_class.toString()); });
   }, [user]);
 
-  const generateQuiz = async (customContent?: string) => {
+  const generateQuiz = async (customContent?: string, count?: number) => {
     setGenerating(true);
     setMode("generating");
+
+    const qCount = count || parseInt(questionCountInput) || 5;
 
     try {
       const resp = await fetch(GENERATE_URL, {
@@ -63,11 +56,11 @@ const Quiz = () => {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          subject: selectedSubject,
+          subject: subjectInput,
           classLevel: studentClass,
-          topic: selectedTopic,
+          topic: topicInput,
           customContent,
-          questionCount: 5,
+          questionCount: qCount,
         }),
       });
 
@@ -96,12 +89,14 @@ const Quiz = () => {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    generateQuiz(`ফাইলের নাম: ${file.name}. এই বিষয় থেকে প্রশ্ন তৈরি করো।`);
+    const count = parseInt(customQuestionCount) || 5;
+    generateQuiz(`ফাইলের নাম: ${file.name}. এই বিষয় থেকে প্রশ্ন তৈরি করো।`, count);
   };
 
   const handleCustomGenerate = () => {
     if (!customUrl.trim()) return;
-    generateQuiz(`এই URL/কন্টেন্ট থেকে প্রশ্ন তৈরি করো: ${customUrl}`);
+    const count = parseInt(customQuestionCount) || 5;
+    generateQuiz(`এই URL/কন্টেন্ট থেকে প্রশ্ন তৈরি করো: ${customUrl}`, count);
   };
 
   const submitAnswer = () => {
@@ -124,7 +119,6 @@ const Quiz = () => {
 
   const score = answers.filter((a, i) => a === questions[i]?.correctIndex).length;
 
-  // Generating screen
   if (mode === "generating") {
     return (
       <div className="p-4 lg:p-8 max-w-2xl mx-auto flex items-center justify-center min-h-[60vh]">
@@ -137,7 +131,6 @@ const Quiz = () => {
     );
   }
 
-  // Result screen
   if (mode === "result") {
     return (
       <div className="p-4 lg:p-8 max-w-2xl mx-auto space-y-4">
@@ -182,7 +175,6 @@ const Quiz = () => {
     );
   }
 
-  // Quiz screen
   if (mode === "quiz" && questions.length > 0) {
     const q = questions[currentQ];
     return (
@@ -249,61 +241,65 @@ const Quiz = () => {
     );
   }
 
-  // Subject selection screen
+  // Subject input screen
   if (mode === "subject") {
     return (
-      <div className="p-4 lg:p-8 max-w-4xl mx-auto space-y-6">
+      <div className="p-4 lg:p-8 max-w-3xl mx-auto space-y-6">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
           <button onClick={() => setMode("select")} className="p-2 rounded-lg hover:bg-muted/30 transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl font-display font-bold">বিষয় বেছে নাও</h1>
+            <h1 className="text-xl font-display font-bold">বিষয়ভিত্তিক কুইজ</h1>
             <p className="text-xs text-muted-foreground">ক্লাস {studentClass} · NCTB সিলেবাস</p>
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {Object.keys(NCTB_SUBJECTS).map((subject, i) => (
-            <motion.button
-              key={subject}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => { setSelectedSubject(subject); setSelectedTopic(""); }}
-              className={`glass-card-hover rounded-xl p-4 text-left ${selectedSubject === subject ? "border-primary/30 bg-primary/5" : ""}`}
-            >
-              <h3 className="text-sm font-semibold">{subject}</h3>
-              <p className="text-xs text-muted-foreground mt-1">{NCTB_SUBJECTS[subject].length}টি টপিক</p>
-            </motion.button>
-          ))}
-        </div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-5 space-y-4">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 block">বিষয়ের নাম লেখো *</label>
+            <input
+              type="text"
+              value={subjectInput}
+              onChange={(e) => setSubjectInput(e.target.value)}
+              placeholder="যেমন: গণিত, পদার্থবিজ্ঞান, ইংরেজি..."
+              className="w-full bg-muted/30 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
+            />
+          </div>
 
-        {selectedSubject && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            <h3 className="font-display font-semibold text-sm">টপিক (ঐচ্ছিক)</h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedTopic("")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  !selectedTopic ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"
-                }`}
-              >সব টপিক</button>
-              {NCTB_SUBJECTS[selectedSubject]?.map(topic => (
-                <button
-                  key={topic}
-                  onClick={() => setSelectedTopic(topic)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    selectedTopic === topic ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"
-                  }`}
-                >{topic}</button>
-              ))}
-            </div>
-            <Button variant="glow" className="w-full rounded-xl gap-2 mt-4" onClick={() => generateQuiz()}>
-              <Sparkles className="w-4 h-4" /> কুইজ শুরু করো
-            </Button>
-          </motion.div>
-        )}
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 block">অধ্যায় / টপিকের নাম (ঐচ্ছিক)</label>
+            <input
+              type="text"
+              value={topicInput}
+              onChange={(e) => setTopicInput(e.target.value)}
+              placeholder="যেমন: বীজগণিত, গতি, Tense..."
+              className="w-full bg-muted/30 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 block">কতগুলো প্রশ্ন চাও?</label>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              value={questionCountInput}
+              onChange={(e) => setQuestionCountInput(e.target.value)}
+              placeholder="5"
+              className="w-full bg-muted/30 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
+            />
+          </div>
+
+          <Button
+            variant="glow"
+            className="w-full rounded-xl gap-2 mt-2"
+            onClick={() => generateQuiz()}
+            disabled={!subjectInput.trim()}
+          >
+            <Sparkles className="w-4 h-4" /> কুইজ শুরু করো
+          </Button>
+        </motion.div>
       </div>
     );
   }
@@ -339,6 +335,20 @@ const Quiz = () => {
               <opt.icon className="w-4 h-4" /> {opt.label}
             </button>
           ))}
+        </div>
+
+        {/* Question count input */}
+        <div className="glass-card rounded-xl p-4">
+          <label className="text-xs text-muted-foreground mb-1.5 block">কতগুলো প্রশ্ন চাও?</label>
+          <input
+            type="number"
+            min="1"
+            max="50"
+            value={customQuestionCount}
+            onChange={(e) => setCustomQuestionCount(e.target.value)}
+            placeholder="5"
+            className="w-full bg-muted/30 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
+          />
         </div>
 
         {(customSource === "pdf" || customSource === "image") ? (
@@ -380,10 +390,8 @@ const Quiz = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
-          { title: "📚 NCTB বিষয়ভিত্তিক কুইজ", desc: "ক্লাস ও বিষয় অনুযায়ী AI কুইজ জেনারেট করো", action: () => setMode("subject"), color: "primary" },
+          { title: "📚 NCTB বিষয়ভিত্তিক কুইজ", desc: "বিষয় ও অধ্যায়ের নাম লিখে AI কুইজ জেনারেট করো", action: () => setMode("subject"), color: "primary" },
           { title: "📎 কাস্টম সোর্স থেকে কুইজ", desc: "PDF, ছবি, YouTube বা ওয়েবসাইট থেকে কুইজ তৈরি করো", action: () => setMode("custom"), color: "secondary" },
-          { title: "⚡ দ্রুত কুইজ — গণিত", desc: "গণিতের গুরুত্বপূর্ণ প্রশ্ন", action: () => { setSelectedSubject("গণিত"); generateQuiz(); }, color: "primary" },
-          { title: "🔬 দ্রুত কুইজ — বিজ্ঞান", desc: "বিজ্ঞানের গুরুত্বপূর্ণ প্রশ্ন", action: () => { setSelectedSubject("পদার্থবিজ্ঞান"); generateQuiz(); }, color: "secondary" },
         ].map((item, i) => (
           <motion.div
             key={item.title}

@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
   Zap, BookOpen, Brain, Trophy, Target, Flame, Star,
-  MessageSquare, FileText, Calculator, Lightbulb, GraduationCap,
-  TrendingUp, Library, Settings, Sparkles, ArrowRight
+  MessageSquare, FileText, Calculator,
+  TrendingUp, Library, Settings, Sparkles, ArrowRight, Heart
 } from "lucide-react";
 import BentoCard from "@/components/dashboard/BentoCard";
 import { Progress } from "@/components/ui/progress";
@@ -19,12 +19,28 @@ interface Profile {
   student_class: number | null;
 }
 
+const motivationalQuotes = [
+  { text: "তোমার সাফল্য তোমার হাতেই — আজই শুরু করো! 🔥", emoji: "💪" },
+  { text: "ছোট ছোট পদক্ষেপই বড় সাফল্যের সিঁড়ি।", emoji: "🪜" },
+  { text: "পড়াশোনা কঠিন, কিন্তু না পড়লে জীবন আরো কঠিন!", emoji: "📚" },
+  { text: "আজকের কষ্ট আগামীকালের হাসি তৈরি করবে।", emoji: "😊" },
+  { text: "তুমি পারবে — এটা বিশ্বাস করাটাই প্রথম পদক্ষেপ!", emoji: "⭐" },
+  { text: "প্রতিটি ভুল থেকে শেখো, প্রতিটি চেষ্টা তোমাকে শক্তিশালী করে।", emoji: "🧠" },
+  { text: "সফল মানুষরা হাল ছাড়ে না — তুমিও ছাড়বে না!", emoji: "🏆" },
+  { text: "আজ তুমি যা শিখবে, কাল সেটাই তোমার অস্ত্র হবে।", emoji: "⚔️" },
+  { text: "স্বপ্ন দেখো বড়, পরিশ্রম করো আরো বড়!", emoji: "🌟" },
+  { text: "পৃথিবীর সেরা বিনিয়োগ হলো নিজের মেধায় বিনিয়োগ।", emoji: "💎" },
+  { text: "হাজার মাইলের যাত্রা শুরু হয় একটি পদক্ষেপ দিয়ে।", emoji: "🚀" },
+  { text: "তুমি যদি থেমে যাও, তাহলে কে এগিয়ে যাবে?", emoji: "🏃" },
+];
+
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [notesCount, setNotesCount] = useState(0);
   const [libraryCount, setLibraryCount] = useState(0);
+  const [quoteIndex, setQuoteIndex] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -41,11 +57,21 @@ const Dashboard = () => {
     fetchData();
   }, [user]);
 
+  // Rotate motivational quotes every 5 minutes
+  useEffect(() => {
+    setQuoteIndex(Math.floor(Math.random() * motivationalQuotes.length));
+    const interval = setInterval(() => {
+      setQuoteIndex(prev => (prev + 1) % motivationalQuotes.length);
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const xp = profile?.xp ?? 0;
   const level = profile?.level ?? 1;
   const nextLevelXp = level * 500;
   const xpProgress = Math.min((xp / nextLevelXp) * 100, 100);
   const displayName = profile?.full_name || user?.user_metadata?.full_name || "Student";
+  const currentQuote = motivationalQuotes[quoteIndex];
 
   const allFeatures = [
     { label: "🤖 AI টিউটর", desc: "যেকোনো প্রশ্ন করো — বন্ধুর মতো বোঝাবে", icon: MessageSquare, path: "/chat", gradient: "from-emerald-500/20 to-teal-500/20" },
@@ -54,14 +80,6 @@ const Dashboard = () => {
     { label: "📚 লাইব্রেরী", desc: `${libraryCount}টি বই ও গাইড পড়ো ফ্রিতে`, icon: Library, path: "/library", gradient: "from-amber-500/20 to-orange-500/20" },
     { label: "📐 ফর্মুলা শীট", desc: "সকল সূত্র এক জায়গায়", icon: Calculator, path: "/chat", gradient: "from-cyan-500/20 to-sky-500/20" },
     { label: "⚙️ সেটিংস", desc: "প্রোফাইল ও পছন্দ পরিবর্তন", icon: Settings, path: "/settings", gradient: "from-gray-500/20 to-slate-500/20" },
-  ];
-
-  const studyTips = [
-    "📖 প্রতিদিন অন্তত ৩০ মিনিট পড়াশোনা করো",
-    "🧠 কঠিন বিষয় AI টিউটরকে জিজ্ঞেস করো",
-    "📝 PDF আপলোড করে AI নোটস তৈরি করো",
-    "🎯 কুইজ দিয়ে নিজেকে যাচাই করো",
-    "📚 লাইব্রেরী থেকে ফ্রি বই পড়ো",
   ];
 
   return (
@@ -74,6 +92,27 @@ const Dashboard = () => {
         <p className="text-muted-foreground text-sm">
           {profile?.student_class ? `ক্লাস ${profile.student_class} · ` : ""}তোমার শেখার যাত্রা চালিয়ে যাও!
         </p>
+      </motion.div>
+
+      {/* Motivational Quote */}
+      <motion.div
+        key={quoteIndex}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="glass-card rounded-2xl p-5 border-l-4 border-primary"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center text-2xl flex-shrink-0">
+            {currentQuote.emoji}
+          </div>
+          <div>
+            <p className="text-sm font-medium leading-relaxed">{currentQuote.text}</p>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              <Heart className="w-3 h-3 text-primary" /> মোটিভেশন
+            </p>
+          </div>
+        </div>
       </motion.div>
 
       {/* XP + Stats row */}
@@ -124,23 +163,12 @@ const Dashboard = () => {
         </div>
       </motion.div>
 
-      {/* Tips & Achievements */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="glass-card rounded-2xl p-5 space-y-3">
-          <h2 className="font-display font-semibold flex items-center gap-2 text-sm">
-            <TrendingUp className="w-4 h-4 text-primary" /> আজকের টিপস
-          </h2>
-          {studyTips.map((tip, i) => (
-            <div key={i} className="py-2 border-b border-border/30 last:border-0">
-              <p className="text-sm">{tip}</p>
-            </div>
-          ))}
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }} className="glass-card rounded-2xl p-5 space-y-3">
-          <h2 className="font-display font-semibold flex items-center gap-2 text-sm">
-            <Trophy className="w-4 h-4 text-secondary" /> অ্যাচিভমেন্টস
-          </h2>
+      {/* Achievements */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="glass-card rounded-2xl p-5 space-y-3">
+        <h2 className="font-display font-semibold flex items-center gap-2 text-sm">
+          <Trophy className="w-4 h-4 text-secondary" /> অ্যাচিভমেন্টস
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { label: "নোট মাস্টার", desc: "১০টি নোটস তৈরি করো", progress: Math.min((notesCount / 10) * 100, 100), icon: FileText },
             { label: "রাইজিং স্টার", desc: `লেভেল ${level > 5 ? "✓" : "5 এ পৌঁছাও"}`, progress: Math.min((level / 5) * 100, 100), icon: Star },
@@ -160,8 +188,8 @@ const Dashboard = () => {
               <Progress value={item.progress} className="h-1.5 bg-muted" />
             </div>
           ))}
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
 };
