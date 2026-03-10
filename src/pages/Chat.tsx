@@ -1,15 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, ImagePlus, Bot, User, Sparkles } from "lucide-react";
+import { Send, ImagePlus, Bot, User, Sparkles, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatMessageContent from "@/components/chat/ChatMessageContent";
+import TextToSpeech from "@/components/chat/TextToSpeech";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  imageUrl?: string;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -21,12 +24,16 @@ const Chat = () => {
     {
       id: "1",
       role: "assistant",
-      content: "আসসালামু আলাইকুম! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! সব কিছু **সম্পূর্ণ ফ্রি**! 🎓",
+      content: "আসসালামু আলাইকুম! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি পাঠিয়েও সমাধান নিতে পারো 📸\n\nসব কিছু **সম্পূর্ণ ফ্রি**! 🎓",
     },
   ]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -44,17 +51,81 @@ const Chat = () => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "শুধুমাত্র ছবি আপলোড করো", variant: "destructive" });
+      return;
+    }
+    setSelectedImage(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    if (!user) throw new Error("Not authenticated");
+    const ext = file.name.split(".").pop();
+    const filePath = `chat-images/${user.id}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("notebook-uploads").upload(filePath, file);
+    if (error) throw error;
+    const { data } = supabase.storage.from("notebook-uploads").getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
   const handleSend = async () => {
-    if (!input.trim() || isStreaming) return;
-    const userMsg: Message = { id: Date.now().toString(), role: "user", content: input };
+    if ((!input.trim() && !selectedImage) || isStreaming) return;
+
+    let imageUrl: string | undefined;
+
+    if (selectedImage) {
+      setUploadingImage(true);
+      try {
+        imageUrl = await uploadImage(selectedImage);
+      } catch (e) {
+        toast({ title: "ছবি আপলোড ব্যর্থ", variant: "destructive" });
+        setUploadingImage(false);
+        return;
+      }
+      setUploadingImage(false);
+    }
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: input || (imageUrl ? "এই ছবিটি দেখে সমাধান করো" : ""),
+      imageUrl,
+    };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
+    removeImage();
     setIsStreaming(true);
 
     let assistantContent = "";
 
     try {
+      // Build message content for API
+      const apiMessages = newMessages.map((m) => {
+        if (m.imageUrl) {
+          return {
+            role: m.role,
+            content: [
+              { type: "text" as const, text: m.content || "এই ছবিটি বিশ্লেষণ করো এবং সমাধান দাও" },
+              { type: "image_url" as const, image_url: { url: m.imageUrl } },
+            ],
+          };
+        }
+        return { role: m.role, content: m.content };
+      });
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
@@ -62,7 +133,7 @@ const Chat = () => {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+          messages: apiMessages,
           studentClass,
         }),
       });
@@ -154,8 +225,18 @@ const Chat = () => {
                   ? "bg-primary text-primary-foreground rounded-br-md"
                   : "glass-card rounded-bl-md"
               }`}>
+                {msg.imageUrl && (
+                  <img src={msg.imageUrl} alt="uploaded" className="rounded-lg max-h-40 object-cover mb-2" />
+                )}
                 {msg.role === "assistant" ? (
-                  <ChatMessageContent content={msg.content} />
+                  <div>
+                    <ChatMessageContent content={msg.content} />
+                    {msg.content && (
+                      <div className="flex justify-end mt-1">
+                        <TextToSpeech text={msg.content} />
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   msg.content.split("\n").map((line, i) => (
                     <p key={i} className={i > 0 ? "mt-2" : ""}>{line}</p>
@@ -187,10 +268,35 @@ const Chat = () => {
         )}
       </div>
 
+      {/* Image preview */}
+      {imagePreview && (
+        <div className="px-4 pb-2">
+          <div className="inline-flex items-center gap-2 p-2 glass-card rounded-xl">
+            <img src={imagePreview} alt="preview" className="w-16 h-16 object-cover rounded-lg" />
+            <button onClick={removeImage} className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="p-4 glass-card border-t border-border/50">
         <div className="flex items-center gap-2 max-w-3xl mx-auto">
-          <Button variant="glass" size="icon" className="flex-shrink-0 rounded-xl">
-            <ImagePlus className="w-4 h-4" />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+          <Button
+            variant="glass"
+            size="icon"
+            className="flex-shrink-0 rounded-xl"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isStreaming || uploadingImage}
+          >
+            {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
           </Button>
           <div className="flex-1 glass-card rounded-xl flex items-center">
             <input
@@ -198,11 +304,11 @@ const Chat = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="যেকোনো প্রশ্ন করো..."
+              placeholder="যেকোনো প্রশ্ন করো বা ছবি পাঠাও..."
               className="flex-1 bg-transparent px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
               disabled={isStreaming}
             />
-            <Button onClick={handleSend} variant="glow" size="icon" className="m-1 rounded-lg" disabled={!input.trim() || isStreaming}>
+            <Button onClick={handleSend} variant="glow" size="icon" className="m-1 rounded-lg" disabled={(!input.trim() && !selectedImage) || isStreaming}>
               <Send className="w-4 h-4" />
             </Button>
           </div>
