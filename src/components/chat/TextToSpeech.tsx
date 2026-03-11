@@ -25,15 +25,73 @@ const stripMarkdown = (md: string): string => {
     .trim();
 };
 
+// Split text into smaller chunks for smoother TTS
+const splitIntoChunks = (text: string, maxLen = 200): string[] => {
+  const sentences = text.split(/(?<=[।.!?])\s+/);
+  const chunks: string[] = [];
+  let current = "";
+
+  for (const sentence of sentences) {
+    if ((current + " " + sentence).length > maxLen && current) {
+      chunks.push(current.trim());
+      current = sentence;
+    } else {
+      current = current ? current + " " + sentence : sentence;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks.length ? chunks : [text];
+};
+
 const TextToSpeech = ({ text, className = "" }: TextToSpeechProps) => {
   const [speaking, setSpeaking] = useState(false);
   const [loading, setLoading] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const chunkIndexRef = useRef(0);
+  const chunksRef = useRef<string[]>([]);
 
   const stop = useCallback(() => {
     window.speechSynthesis.cancel();
     setSpeaking(false);
     setLoading(false);
+    chunkIndexRef.current = 0;
+    chunksRef.current = [];
+  }, []);
+
+  const speakChunk = useCallback((chunks: string[], index: number) => {
+    if (index >= chunks.length) {
+      setSpeaking(false);
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(chunks[index]);
+
+    const voices = window.speechSynthesis.getVoices();
+    const bnVoice = voices.find(v => v.lang.startsWith("bn"));
+    const enVoice = voices.find(v => v.lang === "en-US" && v.name.includes("Google")) ||
+                    voices.find(v => v.lang === "en-US");
+
+    const bengaliChars = chunks[index].match(/[\u0980-\u09FF]/g)?.length || 0;
+    const isMostlyBengali = bengaliChars > chunks[index].length * 0.3;
+
+    if (isMostlyBengali && bnVoice) {
+      utterance.voice = bnVoice;
+      utterance.lang = "bn-BD";
+    } else if (enVoice) {
+      utterance.voice = enVoice;
+      utterance.lang = "en-US";
+    }
+
+    utterance.rate = 0.85;
+    utterance.pitch = 1.05;
+
+    utterance.onstart = () => { setLoading(false); setSpeaking(true); };
+    utterance.onend = () => {
+      chunkIndexRef.current = index + 1;
+      speakChunk(chunks, index + 1);
+    };
+    utterance.onerror = () => { setSpeaking(false); setLoading(false); };
+
+    window.speechSynthesis.speak(utterance);
   }, []);
 
   const speak = useCallback(() => {
@@ -46,38 +104,24 @@ const TextToSpeech = ({ text, className = "" }: TextToSpeechProps) => {
     if (!cleanText) return;
 
     setLoading(true);
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utteranceRef.current = utterance;
-
-    // Try to find a good Bengali or English voice
-    const voices = window.speechSynthesis.getVoices();
-    const bnVoice = voices.find(v => v.lang.startsWith("bn"));
-    const enVoice = voices.find(v => v.lang === "en-US" && v.name.includes("Google")) ||
-                    voices.find(v => v.lang === "en-US");
-
-    // Detect if text is mostly Bengali
-    const bengaliChars = cleanText.match(/[\u0980-\u09FF]/g)?.length || 0;
-    const isMostlyBengali = bengaliChars > cleanText.length * 0.3;
-
-    if (isMostlyBengali && bnVoice) {
-      utterance.voice = bnVoice;
-      utterance.lang = "bn-BD";
-    } else if (enVoice) {
-      utterance.voice = enVoice;
-      utterance.lang = "en-US";
-    }
-
-    utterance.rate = 0.9;
-    utterance.pitch = 1.0;
-
-    utterance.onstart = () => { setLoading(false); setSpeaking(true); };
-    utterance.onend = () => { setSpeaking(false); };
-    utterance.onerror = () => { setSpeaking(false); setLoading(false); };
-
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-  }, [text, speaking, stop]);
+
+    // Ensure voices are loaded
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        const chunks = splitIntoChunks(cleanText);
+        chunksRef.current = chunks;
+        chunkIndexRef.current = 0;
+        speakChunk(chunks, 0);
+      };
+    } else {
+      const chunks = splitIntoChunks(cleanText);
+      chunksRef.current = chunks;
+      chunkIndexRef.current = 0;
+      speakChunk(chunks, 0);
+    }
+  }, [text, speaking, stop, speakChunk]);
 
   if (!text) return null;
 
