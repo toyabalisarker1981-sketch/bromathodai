@@ -20,13 +20,8 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const Chat = () => {
   const { user } = useAuth();
   const [studentClass, setStudentClass] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content: "আসসালামু আলাইকুম! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি পাঠিয়েও সমাধান নিতে পারো 📸\n\nসব কিছু **সম্পূর্ণ ফ্রি**! 🎓",
-    },
-  ]);
+  const [studentName, setStudentName] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
