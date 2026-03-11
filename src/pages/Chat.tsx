@@ -34,11 +34,20 @@ const Chat = () => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("student_class")
+      .select("student_class, full_name")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
         if (data?.student_class) setStudentClass(data.student_class.toString());
+        const name = data?.full_name || user.user_metadata?.full_name || "";
+        setStudentName(name);
+        setMessages([{
+          id: "1",
+          role: "assistant",
+          content: name
+            ? `আসসালামু আলাইকুম, **${name}**! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি পাঠিয়েও সমাধান নিতে পারো 📸\n\nসব কিছু **সম্পূর্ণ ফ্রি**! 🎓`
+            : "আসসালামু আলাইকুম! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি পাঠিয়েও সমাধান নিতে পারো 📸\n\nসব কিছু **সম্পূর্ণ ফ্রি**! 🎓",
+        }]);
       });
   }, [user]);
 
