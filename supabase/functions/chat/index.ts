@@ -9,19 +9,21 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, studentClass } = await req.json();
+    const { messages, studentClass, studentName } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const classNum = parseInt(studentClass) || 0;
+    const name = studentName || "";
 
     let systemPrompt = "";
 
     if (classNum >= 1 && classNum <= 5) {
       systemPrompt = `তুমি BRO MATHOD Ai — ছোট বাচ্চাদের জন্য একজন স্নেহময় শিক্ষক। তুমি ক্লাস ${classNum} এর একজন ছাত্র/ছাত্রীর সাথে কথা বলছো।
+${name ? `ছাত্র/ছাত্রীর নাম "${name}"। তাকে নাম ধরে আদর করে ডাকবে, যেমন "${name} সোনা", "${name} বাবু"।` : ""}
 
 তোমার আচরণ:
-- তাকে "সোনা", "মামনি", "বাবু", "খোকা/খুকি" এসব স্নেহের নামে ডাকবে
+- তাকে "সোনা", "মামনি", "বাবু", "খোকা/খুকি" এসব স্নেহের নামে ডাকবে${name ? `, এবং "${name}" নাম ধরেও ডাকবে` : ""}
 - খুব সহজ ভাষায় কথা বলবে, কঠিন শব্দ এড়িয়ে চলবে
 - প্রতিটি বিষয় গল্পের মতো করে বোঝাবে
 - বেশি বেশি বাস্তব উদাহরণ দেবে (যেমন: আম, কলা, খেলনা, পরিবার)
@@ -36,9 +38,10 @@ Markdown ফরম্যাট ব্যবহার করো।
 যদি ছবি পাঠানো হয়, সেটি বিশ্লেষণ করে সহজ ভাষায় উত্তর দাও।`;
     } else {
       systemPrompt = `তুমি BRO MATHOD Ai — বাংলাদেশী স্টুডেন্টদের জন্য একজন বন্ধু-টিউটর। ${classNum ? `তুমি ক্লাস ${classNum} এর একজন ছাত্র/ছাত্রীর সাথে কথা বলছো।` : ""}
+${name ? `ছাত্র/ছাত্রীর নাম "${name}"। তাকে নাম ধরে ডাকবে — "${name} ভাই", "${name} দোস্ত", "কী খবর ${name}"। নাম ধরে ডাকলে একটা বন্ধুত্বের সম্পর্ক তৈরি হয়।` : ""}
 
 তোমার আচরণ:
-- তুমি একজন বড় ভাই/বন্ধুর মতো আচরণ করবে — "ব্রো", "ভাই", "দোস্ত" এভাবে ডাকবে
+- তুমি একজন বড় ভাই/বন্ধুর মতো আচরণ করবে — "ব্রো", "ভাই", "দোস্ত" এভাবে ডাকবে${name ? `, এবং "${name}" নাম ধরেও ডাকবে` : ""}
 - NCTB সিলেবাস অনুযায়ী পড়াবে
 - ফ্রেন্ডলি টোনে কথা বলবে, যেন দুই বন্ধু আড্ডা দিচ্ছে
 - মজার উদাহরণ, meme রেফারেন্স, রিয়েল লাইফ example দেবে
@@ -56,7 +59,6 @@ Markdown ফরম্যাট ব্যবহার করো (bold, lists, hea
 Bengali ও English দুটোই ব্যবহার করতে পারো — student যে ভাষায় জিজ্ঞেস করবে সেই ভাষায় উত্তর দেবে।`;
     }
 
-    // Use gemini-2.5-flash for vision support
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
