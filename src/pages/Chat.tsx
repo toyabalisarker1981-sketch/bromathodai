@@ -77,7 +77,7 @@ const Chat = () => {
   const uploadImage = async (file: File): Promise<string> => {
     if (!user) throw new Error("Not authenticated");
     const ext = file.name.split(".").pop();
-    const filePath = `chat-images/${user.id}/${Date.now()}.${ext}`;
+    const filePath = `${user.id}/chat-images/${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("notebook-uploads").upload(filePath, file);
     if (error) throw error;
     const { data } = supabase.storage.from("notebook-uploads").getPublicUrl(filePath);
