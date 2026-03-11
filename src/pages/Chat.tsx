@@ -139,6 +139,7 @@ const Chat = () => {
         body: JSON.stringify({
           messages: apiMessages,
           studentClass,
+          studentName,
         }),
       });
 
