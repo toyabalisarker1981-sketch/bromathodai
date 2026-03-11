@@ -113,7 +113,38 @@ const Quiz = () => {
     if (currentQ < questions.length - 1) {
       setCurrentQ(p => p + 1);
     } else {
-      setMode("result");
+      finishQuiz();
+    }
+  };
+
+  const finishQuiz = async () => {
+    setMode("result");
+    // Update XP and streak
+    if (!user) return;
+    try {
+      const correctCount = answers.filter((a, i) => a === questions[i]?.correctIndex).length;
+      const xpEarned = correctCount * 10 + questions.length * 2; // bonus for attempting
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("xp, level, streak_days")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profile) {
+        const newXp = (profile.xp || 0) + xpEarned;
+        const newLevel = Math.floor(newXp / 500) + 1;
+        const newStreak = (profile.streak_days || 0) + 1;
+
+        await supabase
+          .from("profiles")
+          .update({ xp: newXp, level: newLevel, streak_days: newStreak })
+          .eq("user_id", user.id);
+
+        toast({ title: `+${xpEarned} XP অর্জন! 🎉`, description: `লেভেল ${newLevel} · স্ট্রিক ${newStreak} দিন` });
+      }
+    } catch (e) {
+      console.error("XP update error:", e);
     }
   };
 
@@ -337,7 +368,6 @@ const Quiz = () => {
           ))}
         </div>
 
-        {/* Question count input */}
         <div className="glass-card rounded-xl p-4">
           <label className="text-xs text-muted-foreground mb-1.5 block">কতগুলো প্রশ্ন চাও?</label>
           <input

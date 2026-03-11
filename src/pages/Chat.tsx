@@ -20,13 +20,8 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const Chat = () => {
   const { user } = useAuth();
   const [studentClass, setStudentClass] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content: "আসসালামু আলাইকুম! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি পাঠিয়েও সমাধান নিতে পারো 📸\n\nসব কিছু **সম্পূর্ণ ফ্রি**! 🎓",
-    },
-  ]);
+  const [studentName, setStudentName] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -39,11 +34,20 @@ const Chat = () => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("student_class")
+      .select("student_class, full_name")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
         if (data?.student_class) setStudentClass(data.student_class.toString());
+        const name = data?.full_name || user.user_metadata?.full_name || "";
+        setStudentName(name);
+        setMessages([{
+          id: "1",
+          role: "assistant",
+          content: name
+            ? `আসসালামু আলাইকুম, **${name}**! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি পাঠিয়েও সমাধান নিতে পারো 📸\n\nসব কিছু **সম্পূর্ণ ফ্রি**! 🎓`
+            : "আসসালামু আলাইকুম! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি পাঠিয়েও সমাধান নিতে পারো 📸\n\nসব কিছু **সম্পূর্ণ ফ্রি**! 🎓",
+        }]);
       });
   }, [user]);
 
@@ -73,7 +77,7 @@ const Chat = () => {
   const uploadImage = async (file: File): Promise<string> => {
     if (!user) throw new Error("Not authenticated");
     const ext = file.name.split(".").pop();
-    const filePath = `chat-images/${user.id}/${Date.now()}.${ext}`;
+    const filePath = `${user.id}/chat-images/${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("notebook-uploads").upload(filePath, file);
     if (error) throw error;
     const { data } = supabase.storage.from("notebook-uploads").getPublicUrl(filePath);
@@ -135,6 +139,7 @@ const Chat = () => {
         body: JSON.stringify({
           messages: apiMessages,
           studentClass,
+          studentName,
         }),
       });
 

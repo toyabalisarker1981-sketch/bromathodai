@@ -78,7 +78,7 @@ const Dashboard = () => {
     { label: "📝 নোটবুক AI", desc: "PDF আপলোড করো — AI নোট তৈরি করবে", icon: BookOpen, path: "/notebook", gradient: "from-blue-500/20 to-indigo-500/20" },
     { label: "🎯 কুইজ ইঞ্জিন", desc: "NCTB সিলেবাস অনুযায়ী AI কুইজ", icon: Brain, path: "/quiz", gradient: "from-purple-500/20 to-pink-500/20" },
     { label: "📚 লাইব্রেরী", desc: `${libraryCount}টি বই ও গাইড পড়ো ফ্রিতে`, icon: Library, path: "/library", gradient: "from-amber-500/20 to-orange-500/20" },
-    { label: "📐 ফর্মুলা শীট", desc: "সকল সূত্র এক জায়গায়", icon: Calculator, path: "/chat", gradient: "from-cyan-500/20 to-sky-500/20" },
+    { label: "✨ কনটেন্ট তৈরি", desc: "মাইন্ড ম্যাপ, ফ্ল্যাশ কার্ড, ফর্মুলা শীট", icon: Calculator, path: "/create-content", gradient: "from-cyan-500/20 to-sky-500/20" },
     { label: "⚙️ সেটিংস", desc: "প্রোফাইল ও পছন্দ পরিবর্তন", icon: Settings, path: "/settings", gradient: "from-gray-500/20 to-slate-500/20" },
   ];
 

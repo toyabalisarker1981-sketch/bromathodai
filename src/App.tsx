@@ -15,6 +15,7 @@ import Chat from "@/pages/Chat";
 import Notebook from "@/pages/Notebook";
 import Library from "@/pages/Library";
 import Quiz from "@/pages/Quiz";
+import CreateContent from "@/pages/CreateContent";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
 
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/notebook" element={<Notebook />} />
               <Route path="/library" element={<Library />} />
               <Route path="/quiz" element={<Quiz />} />
+              <Route path="/create-content" element={<CreateContent />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/landing" replace />} />

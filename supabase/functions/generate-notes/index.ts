@@ -9,11 +9,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { fileUrl, fileName, sourceType } = await req.json();
+    const { fileUrl, fileName, sourceType, customPrompt } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const prompt = sourceType === "image"
+    const prompt = customPrompt ? customPrompt : sourceType === "image"
       ? `তুমি একজন বাংলাদেশী শিক্ষক। এই ছবিটি বিশ্লেষণ করো এবং এর উপর একটি সুন্দর হ্যান্ড নোট তৈরি করো।
 
 ছবির URL: ${fileUrl}

@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://bro-mathod-premium.lovable.app/sitemap.xml

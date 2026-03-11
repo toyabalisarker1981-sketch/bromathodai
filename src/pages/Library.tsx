@@ -344,26 +344,24 @@ const Library = () => {
               {/* Subject & Class */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">বিষয়</label>
-                  <select
+                  <label className="text-xs text-muted-foreground mb-1 block">বিষয়ের নাম</label>
+                  <input
+                    type="text"
                     value={uploadSubject}
                     onChange={(e) => setUploadSubject(e.target.value)}
-                    className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors"
-                  >
-                    <option value="">নির্বাচন করো</option>
-                    {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                    placeholder="যেমন: গণিত, পদার্থবিজ্ঞান..."
+                    className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
+                  />
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">ক্লাস</label>
-                  <select
+                  <input
+                    type="text"
                     value={uploadClass}
                     onChange={(e) => setUploadClass(e.target.value)}
-                    className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors"
-                  >
-                    <option value="">নির্বাচন করো</option>
-                    {[1,2,3,4,5,6,7,8,9,10,11,12].map((c) => <option key={c} value={c}>ক্লাস {c}</option>)}
-                  </select>
+                    placeholder="যেমন: 9, 10..."
+                    className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
+                  />
                 </div>
               </div>
 
