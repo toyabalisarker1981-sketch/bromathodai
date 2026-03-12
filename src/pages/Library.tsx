@@ -1,10 +1,48 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Library as LibraryIcon, Upload, Search, BookOpen, Eye, Trash2, Plus, Loader2, X, FileText, Image } from "lucide-react";
+import { Library as LibraryIcon, Upload, Search, BookOpen, Eye, Trash2, Plus, Loader2, X, FileText, Image, Download, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+
+// IndexedDB helper for offline PDF caching
+const DB_NAME = "bro-mathod-library";
+const STORE_NAME = "cached-pdfs";
+
+const openDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(STORE_NAME); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+};
+
+const getCachedPdf = async (id: string): Promise<Blob | null> => {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const req = tx.objectStore(STORE_NAME).get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch { return null; }
+};
+
+const cachePdf = async (id: string, blob: Blob) => {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(blob, id);
+  } catch (e) { console.error("Cache error:", e); }
+};
+
+const isCached = async (id: string): Promise<boolean> => {
+  const blob = await getCachedPdf(id);
+  return blob !== null;
+};
 
 interface LibraryItem {
   id: string;
