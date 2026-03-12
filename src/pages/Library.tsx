@@ -88,6 +88,18 @@ const Library = () => {
     checkAdmin();
   }, [user]);
 
+  // Check which items are cached
+  useEffect(() => {
+    const checkCachedItems = async () => {
+      const cached = new Set<string>();
+      for (const item of items) {
+        if (await isCached(item.id)) cached.add(item.id);
+      }
+      setCachedIds(cached);
+    };
+    if (items.length > 0) checkCachedItems();
+  }, [items]);
+
   const checkAdmin = async () => {
     if (!user) return;
     const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
@@ -102,6 +114,48 @@ const Library = () => {
       .order("created_at", { ascending: false });
     if (data) setItems(data as LibraryItem[]);
     setLoading(false);
+  };
+
+  const handleOpenPdf = async (item: LibraryItem) => {
+    setDownloadingId(item.id);
+    
+    // Check cache first
+    const cached = await getCachedPdf(item.id);
+    if (cached) {
+      const url = URL.createObjectURL(cached);
+      setPdfBlobUrl(url);
+      setViewingPdf(item);
+      setDownloadingId(null);
+      return;
+    }
+
+    // Ask user to download
+    const confirm = window.confirm("এই বইটি তোমার ডিভাইসে ক্যাশ করা হবে যাতে পরে ইন্টারনেট ছাড়াও পড়তে পারো। ডাউনলোড করতে চাও?");
+    
+    try {
+      const response = await fetch(item.pdf_url);
+      if (!response.ok) throw new Error("Download failed");
+      const blob = await response.blob();
+      
+      if (confirm) {
+        await cachePdf(item.id, blob);
+        setCachedIds(prev => new Set(prev).add(item.id));
+        toast({ title: "ডাউনলোড সম্পন্ন ✅", description: "এখন অফলাইনেও পড়তে পারবে" });
+      }
+      
+      const url = URL.createObjectURL(blob);
+      setPdfBlobUrl(url);
+      setViewingPdf(item);
+    } catch (e) {
+      toast({ title: "ডাউনলোড ব্যর্থ", variant: "destructive" });
+    }
+    setDownloadingId(null);
+  };
+
+  const handleClosePdf = () => {
+    if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
+    setPdfBlobUrl(null);
+    setViewingPdf(null);
   };
 
   const handleThumbSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
