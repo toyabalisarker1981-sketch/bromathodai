@@ -339,8 +339,8 @@ const Library = () => {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              className="glass-card-hover rounded-2xl overflow-hidden cursor-pointer group"
-              onClick={() => setViewingPdf(item)}
+              className={`glass-card-hover rounded-2xl overflow-hidden cursor-pointer group relative ${downloadingId === item.id ? "pointer-events-none opacity-70" : ""}`}
+              onClick={() => handleOpenPdf(item)}
             >
               {/* Thumbnail */}
               <div className="aspect-[3/4] relative overflow-hidden bg-muted/20">
