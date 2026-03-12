@@ -1,10 +1,48 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Library as LibraryIcon, Upload, Search, BookOpen, Eye, Trash2, Plus, Loader2, X, FileText, Image } from "lucide-react";
+import { Library as LibraryIcon, Upload, Search, BookOpen, Eye, Trash2, Plus, Loader2, X, FileText, Image, Download, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+
+// IndexedDB helper for offline PDF caching
+const DB_NAME = "bro-mathod-library";
+const STORE_NAME = "cached-pdfs";
+
+const openDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(STORE_NAME); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+};
+
+const getCachedPdf = async (id: string): Promise<Blob | null> => {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const req = tx.objectStore(STORE_NAME).get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch { return null; }
+};
+
+const cachePdf = async (id: string, blob: Blob) => {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(blob, id);
+  } catch (e) { console.error("Cache error:", e); }
+};
+
+const isCached = async (id: string): Promise<boolean> => {
+  const blob = await getCachedPdf(id);
+  return blob !== null;
+};
 
 interface LibraryItem {
   id: string;
@@ -27,6 +65,9 @@ const Library = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [viewingPdf, setViewingPdf] = useState<LibraryItem | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [cachedIds, setCachedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSubject, setFilterSubject] = useState<string | null>(null);
 
@@ -47,6 +88,18 @@ const Library = () => {
     checkAdmin();
   }, [user]);
 
+  // Check which items are cached
+  useEffect(() => {
+    const checkCachedItems = async () => {
+      const cached = new Set<string>();
+      for (const item of items) {
+        if (await isCached(item.id)) cached.add(item.id);
+      }
+      setCachedIds(cached);
+    };
+    if (items.length > 0) checkCachedItems();
+  }, [items]);
+
   const checkAdmin = async () => {
     if (!user) return;
     const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
@@ -61,6 +114,48 @@ const Library = () => {
       .order("created_at", { ascending: false });
     if (data) setItems(data as LibraryItem[]);
     setLoading(false);
+  };
+
+  const handleOpenPdf = async (item: LibraryItem) => {
+    setDownloadingId(item.id);
+    
+    // Check cache first
+    const cached = await getCachedPdf(item.id);
+    if (cached) {
+      const url = URL.createObjectURL(cached);
+      setPdfBlobUrl(url);
+      setViewingPdf(item);
+      setDownloadingId(null);
+      return;
+    }
+
+    // Ask user to download
+    const confirm = window.confirm("এই বইটি তোমার ডিভাইসে ক্যাশ করা হবে যাতে পরে ইন্টারনেট ছাড়াও পড়তে পারো। ডাউনলোড করতে চাও?");
+    
+    try {
+      const response = await fetch(item.pdf_url);
+      if (!response.ok) throw new Error("Download failed");
+      const blob = await response.blob();
+      
+      if (confirm) {
+        await cachePdf(item.id, blob);
+        setCachedIds(prev => new Set(prev).add(item.id));
+        toast({ title: "ডাউনলোড সম্পন্ন ✅", description: "এখন অফলাইনেও পড়তে পারবে" });
+      }
+      
+      const url = URL.createObjectURL(blob);
+      setPdfBlobUrl(url);
+      setViewingPdf(item);
+    } catch (e) {
+      toast({ title: "ডাউনলোড ব্যর্থ", variant: "destructive" });
+    }
+    setDownloadingId(null);
+  };
+
+  const handleClosePdf = () => {
+    if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
+    setPdfBlobUrl(null);
+    setViewingPdf(null);
   };
 
   const handleThumbSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,20 +237,26 @@ const Library = () => {
 
   // PDF Viewer overlay
   if (viewingPdf) {
+    const pdfSrc = pdfBlobUrl || `${viewingPdf.pdf_url}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`;
     return (
       <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex flex-col">
         <div className="glass-card border-b border-border/50 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <BookOpen className="w-5 h-5 text-primary flex-shrink-0" />
             <h2 className="font-display font-semibold text-sm truncate">{viewingPdf.title}</h2>
+            {cachedIds.has(viewingPdf.id) && (
+              <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                <CheckCircle2 className="w-3 h-3" /> ক্যাশড
+              </span>
+            )}
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setViewingPdf(null)} className="rounded-xl flex-shrink-0">
+          <Button variant="ghost" size="icon" onClick={handleClosePdf} className="rounded-xl flex-shrink-0">
             <X className="w-5 h-5" />
           </Button>
         </div>
         <div className="flex-1 overflow-hidden">
           <iframe
-            src={`${viewingPdf.pdf_url}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
+            src={pdfSrc}
             className="w-full h-full border-0"
             title={viewingPdf.title}
             style={{ pointerEvents: "auto" }}
@@ -238,8 +339,8 @@ const Library = () => {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              className="glass-card-hover rounded-2xl overflow-hidden cursor-pointer group"
-              onClick={() => setViewingPdf(item)}
+              className={`glass-card-hover rounded-2xl overflow-hidden cursor-pointer group relative ${downloadingId === item.id ? "pointer-events-none opacity-70" : ""}`}
+              onClick={() => handleOpenPdf(item)}
             >
               {/* Thumbnail */}
               <div className="aspect-[3/4] relative overflow-hidden bg-muted/20">
@@ -254,12 +355,22 @@ const Library = () => {
                     <FileText className="w-12 h-12 text-muted-foreground/40" />
                   </div>
                 )}
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="flex items-center gap-2 text-primary font-medium text-sm">
-                    <Eye className="w-5 h-5" /> পড়ো
-                  </div>
+                {/* Overlay on hover / downloading */}
+                <div className={`absolute inset-0 bg-background/60 backdrop-blur-sm transition-opacity flex items-center justify-center ${downloadingId === item.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                  {downloadingId === item.id ? (
+                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                  ) : (
+                    <div className="flex items-center gap-2 text-primary font-medium text-sm">
+                      <Eye className="w-5 h-5" /> পড়ো
+                    </div>
+                  )}
                 </div>
+                {/* Cached badge */}
+                {cachedIds.has(item.id) && (
+                  <div className="absolute top-2 right-2 bg-emerald-500/90 text-white text-[9px] px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                    <CheckCircle2 className="w-2.5 h-2.5" /> অফলাইন
+                  </div>
+                )}
               </div>
               {/* Info */}
               <div className="p-3 space-y-1">

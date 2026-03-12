@@ -167,6 +167,7 @@ const Notebook = () => {
         <meta charset="utf-8">
         <title>${note.title} - BRO MATHOD AI Notes</title>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.38/dist/katex.min.js"><\/script>
         <style>
           @page { size: A4; margin: 20mm 15mm; }
           * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -185,6 +186,8 @@ const Notebook = () => {
           .content code { background: #f1f5f9; padding: 2px 5px; border-radius: 3px; font-size: 12px; }
           .content pre { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; overflow-x: auto; margin: 8px 0; }
           .content blockquote { border-left: 3px solid #6366f1; padding-left: 12px; margin: 8px 0; color: #64748b; }
+          .content .katex { font-size: 1.1em; }
+          .content .katex-display { margin: 12px 0; text-align: center; }
           .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
           @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
         </style>
@@ -196,15 +199,40 @@ const Notebook = () => {
         </div>
         <div class="content">${convertMarkdownToHtml(content)}</div>
         <div class="footer">BRO MATHOD AI — তোমার পড়ালেখার সেরা বন্ধু</div>
+        <script>
+          // Render KaTeX for display math
+          document.querySelectorAll('.katex-display-placeholder').forEach(function(el) {
+            try {
+              katex.render(decodeURIComponent(el.dataset.expr), el, { displayMode: true, throwOnError: false });
+            } catch(e) { el.textContent = decodeURIComponent(el.dataset.expr); }
+          });
+          // Render KaTeX for inline math
+          document.querySelectorAll('.katex-inline-placeholder').forEach(function(el) {
+            try {
+              katex.render(decodeURIComponent(el.dataset.expr), el, { displayMode: false, throwOnError: false });
+            } catch(e) { el.textContent = decodeURIComponent(el.dataset.expr); }
+          });
+        <\/script>
       </body>
       </html>
     `);
     printWindow.document.close();
-    setTimeout(() => printWindow.print(), 500);
+    setTimeout(() => printWindow.print(), 1500);
   };
 
   const convertMarkdownToHtml = (md: string): string => {
-    return md
+    // Protect LaTeX blocks from markdown processing
+    const latexBlocks: string[] = [];
+    let processed = md.replace(/\$\$([\s\S]*?)\$\$/g, (_, expr) => {
+      latexBlocks.push(`<div class="katex-display-placeholder" data-expr="${encodeURIComponent(expr.trim())}"></div>`);
+      return `%%LATEX_BLOCK_${latexBlocks.length - 1}%%`;
+    });
+    processed = processed.replace(/\$([^\$\n]+?)\$/g, (_, expr) => {
+      latexBlocks.push(`<span class="katex-inline-placeholder" data-expr="${encodeURIComponent(expr.trim())}"></span>`);
+      return `%%LATEX_BLOCK_${latexBlocks.length - 1}%%`;
+    });
+
+    processed = processed
       .replace(/### (.*)/g, '<h3>$1</h3>')
       .replace(/## (.*)/g, '<h2>$1</h2>')
       .replace(/# (.*)/g, '<h1>$1</h1>')
@@ -216,6 +244,10 @@ const Notebook = () => {
       .replace(/\n\n/g, '</p><p>')
       .replace(/\n/g, '<br>')
       .replace(/^(?!<[hluop])(.+)$/gm, '<p>$1</p>');
+
+    // Restore LaTeX blocks
+    processed = processed.replace(/%%LATEX_BLOCK_(\d+)%%/g, (_, idx) => latexBlocks[parseInt(idx)]);
+    return processed;
   };
 
   const timeAgo = (dateStr: string) => {
