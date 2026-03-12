@@ -237,20 +237,26 @@ const Library = () => {
 
   // PDF Viewer overlay
   if (viewingPdf) {
+    const pdfSrc = pdfBlobUrl || `${viewingPdf.pdf_url}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`;
     return (
       <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex flex-col">
         <div className="glass-card border-b border-border/50 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <BookOpen className="w-5 h-5 text-primary flex-shrink-0" />
             <h2 className="font-display font-semibold text-sm truncate">{viewingPdf.title}</h2>
+            {cachedIds.has(viewingPdf.id) && (
+              <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                <CheckCircle2 className="w-3 h-3" /> ক্যাশড
+              </span>
+            )}
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setViewingPdf(null)} className="rounded-xl flex-shrink-0">
+          <Button variant="ghost" size="icon" onClick={handleClosePdf} className="rounded-xl flex-shrink-0">
             <X className="w-5 h-5" />
           </Button>
         </div>
         <div className="flex-1 overflow-hidden">
           <iframe
-            src={`${viewingPdf.pdf_url}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
+            src={pdfSrc}
             className="w-full h-full border-0"
             title={viewingPdf.title}
             style={{ pointerEvents: "auto" }}
