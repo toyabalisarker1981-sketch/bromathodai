@@ -355,12 +355,22 @@ const Library = () => {
                     <FileText className="w-12 h-12 text-muted-foreground/40" />
                   </div>
                 )}
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="flex items-center gap-2 text-primary font-medium text-sm">
-                    <Eye className="w-5 h-5" /> পড়ো
-                  </div>
+                {/* Overlay on hover / downloading */}
+                <div className={`absolute inset-0 bg-background/60 backdrop-blur-sm transition-opacity flex items-center justify-center ${downloadingId === item.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                  {downloadingId === item.id ? (
+                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                  ) : (
+                    <div className="flex items-center gap-2 text-primary font-medium text-sm">
+                      <Eye className="w-5 h-5" /> পড়ো
+                    </div>
+                  )}
                 </div>
+                {/* Cached badge */}
+                {cachedIds.has(item.id) && (
+                  <div className="absolute top-2 right-2 bg-emerald-500/90 text-white text-[9px] px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                    <CheckCircle2 className="w-2.5 h-2.5" /> অফলাইন
+                  </div>
+                )}
               </div>
               {/* Info */}
               <div className="p-3 space-y-1">
