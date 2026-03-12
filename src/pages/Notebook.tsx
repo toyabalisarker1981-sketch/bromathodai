@@ -204,7 +204,18 @@ const Notebook = () => {
   };
 
   const convertMarkdownToHtml = (md: string): string => {
-    return md
+    // Protect LaTeX blocks from markdown processing
+    const latexBlocks: string[] = [];
+    let processed = md.replace(/\$\$([\s\S]*?)\$\$/g, (_, expr) => {
+      latexBlocks.push(`<div class="katex-display-placeholder" data-expr="${encodeURIComponent(expr.trim())}"></div>`);
+      return `%%LATEX_BLOCK_${latexBlocks.length - 1}%%`;
+    });
+    processed = processed.replace(/\$([^\$\n]+?)\$/g, (_, expr) => {
+      latexBlocks.push(`<span class="katex-inline-placeholder" data-expr="${encodeURIComponent(expr.trim())}"></span>`);
+      return `%%LATEX_BLOCK_${latexBlocks.length - 1}%%`;
+    });
+
+    processed = processed
       .replace(/### (.*)/g, '<h3>$1</h3>')
       .replace(/## (.*)/g, '<h2>$1</h2>')
       .replace(/# (.*)/g, '<h1>$1</h1>')
@@ -216,6 +227,10 @@ const Notebook = () => {
       .replace(/\n\n/g, '</p><p>')
       .replace(/\n/g, '<br>')
       .replace(/^(?!<[hluop])(.+)$/gm, '<p>$1</p>');
+
+    // Restore LaTeX blocks
+    processed = processed.replace(/%%LATEX_BLOCK_(\d+)%%/g, (_, idx) => latexBlocks[parseInt(idx)]);
+    return processed;
   };
 
   const timeAgo = (dateStr: string) => {
