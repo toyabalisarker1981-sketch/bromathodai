@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, MessageSquare, BookOpen, Brain, Settings, LogOut, Library, Sparkles } from "lucide-react";
+import { LayoutDashboard, MessageSquare, BookOpen, Brain, Settings, LogOut, Library, Sparkles, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
