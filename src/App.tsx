@@ -16,6 +16,7 @@ import Notebook from "@/pages/Notebook";
 import Library from "@/pages/Library";
 import Quiz from "@/pages/Quiz";
 import CreateContent from "@/pages/CreateContent";
+import Exam from "@/pages/Exam";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/NotFound";
 
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/library" element={<Library />} />
               <Route path="/quiz" element={<Quiz />} />
               <Route path="/create-content" element={<CreateContent />} />
+              <Route path="/exam" element={<Exam />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/landing" replace />} />

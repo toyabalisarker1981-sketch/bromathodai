@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, MessageSquare, BookOpen, Brain, Settings, LogOut, Library, Sparkles } from "lucide-react";
+import { LayoutDashboard, MessageSquare, BookOpen, Brain, Settings, LogOut, Library, Sparkles, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -9,6 +9,7 @@ const navItems = [
   { to: "/notebook", icon: BookOpen, label: "নোটবুক" },
   { to: "/library", icon: Library, label: "লাইব্রেরী" },
   { to: "/quiz", icon: Brain, label: "কুইজ" },
+  { to: "/exam", icon: ClipboardList, label: "পরীক্ষা" },
   { to: "/create-content", icon: Sparkles, label: "কনটেন্ট" },
   { to: "/settings", icon: Settings, label: "সেটিংস" },
 ];
@@ -68,7 +69,7 @@ const AppLayout = () => {
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-white/[0.06] bg-background/60 backdrop-blur-2xl">
         <div className="flex items-center justify-around h-16">
-          {navItems.slice(0, 6).map((item) => (
+          {navItems.slice(0, 7).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Library as LibraryIcon, Upload, Search, BookOpen, Eye, Trash2, Plus, Loader2, X, FileText, Image, Download, CheckCircle2 } from "lucide-react";
+import { Library as LibraryIcon, Upload, Search, BookOpen, Eye, Trash2, Plus, Loader2, X, FileText, Image, Download, CheckCircle2, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,6 +76,8 @@ const Library = () => {
   const [uploadDesc, setUploadDesc] = useState("");
   const [uploadSubject, setUploadSubject] = useState("");
   const [uploadClass, setUploadClass] = useState("");
+  const [uploadMode, setUploadMode] = useState<"file" | "url">("file");
+  const [uploadDriveUrl, setUploadDriveUrl] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [thumbFile, setThumbFile] = useState<File | null>(null);
   const [thumbPreview, setThumbPreview] = useState<string | null>(null);
@@ -88,7 +90,6 @@ const Library = () => {
     checkAdmin();
   }, [user]);
 
-  // Check which items are cached
   useEffect(() => {
     const checkCachedItems = async () => {
       const cached = new Set<string>();
@@ -119,7 +120,6 @@ const Library = () => {
   const handleOpenPdf = async (item: LibraryItem) => {
     setDownloadingId(item.id);
     
-    // Check cache first
     const cached = await getCachedPdf(item.id);
     if (cached) {
       const url = URL.createObjectURL(cached);
@@ -129,8 +129,18 @@ const Library = () => {
       return;
     }
 
-    // Ask user to download
-    const confirm = window.confirm("এই বইটি তোমার ডিভাইসে ক্যাশ করা হবে যাতে পরে ইন্টারনেট ছাড়াও পড়তে পারো। ডাউনলোড করতে চাও?");
+    // Check if it's a drive/external URL
+    const isExternal = item.pdf_url.startsWith("http") && !item.pdf_url.includes("supabase");
+    
+    if (isExternal) {
+      // For external URLs (Google Drive etc), open in iframe directly
+      setPdfBlobUrl(null);
+      setViewingPdf(item);
+      setDownloadingId(null);
+      return;
+    }
+
+    const confirm = window.confirm("এই বইটি ক্যাশ করতে চাও? পরে অফলাইনেও পড়তে পারবে।");
     
     try {
       const response = await fetch(item.pdf_url);
@@ -140,7 +150,7 @@ const Library = () => {
       if (confirm) {
         await cachePdf(item.id, blob);
         setCachedIds(prev => new Set(prev).add(item.id));
-        toast({ title: "ডাউনলোড সম্পন্ন ✅", description: "এখন অফলাইনেও পড়তে পারবে" });
+        toast({ title: "ডাউনলোড সম্পন্ন ✅" });
       }
       
       const url = URL.createObjectURL(blob);
@@ -168,25 +178,83 @@ const Library = () => {
     }
   };
 
+  // Convert Google Drive share link to embeddable link
+  const convertDriveUrl = (url: string): string => {
+    // Handle various Google Drive URL formats
+    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match) {
+      return `https://drive.google.com/file/d/${match[1]}/preview`;
+    }
+    // If already a direct link or other format, return as-is
+    return url;
+  };
+
   const handleUpload = async () => {
-    if (!pdfFile || !uploadTitle.trim() || !user) return;
+    if (!user) return;
+    
+    if (uploadMode === "url") {
+      // URL mode - just save the drive/external URL
+      if (!uploadDriveUrl.trim() || !uploadTitle.trim()) return;
+      setUploading(true);
+      try {
+        const finalUrl = convertDriveUrl(uploadDriveUrl.trim());
+
+        let thumbnailUrl: string | null = null;
+        if (thumbFile) {
+          const thumbPath = `thumbnails/${Date.now()}_${thumbFile.name}`;
+          const { error: thumbErr } = await supabase.storage.from("library").upload(thumbPath, thumbFile);
+          if (thumbErr) throw thumbErr;
+          const { data: thumbUrlData } = supabase.storage.from("library").getPublicUrl(thumbPath);
+          thumbnailUrl = thumbUrlData.publicUrl;
+        }
+
+        const { error: insertErr } = await supabase.from("library_items").insert({
+          title: uploadTitle,
+          description: uploadDesc || null,
+          subject: uploadSubject || null,
+          class_level: uploadClass ? parseInt(uploadClass) : null,
+          pdf_url: finalUrl,
+          thumbnail_url: thumbnailUrl,
+          uploaded_by: user.id,
+        });
+        if (insertErr) throw insertErr;
+
+        toast({ title: "সফলভাবে যুক্ত হয়েছে! ✅" });
+        setShowUpload(false);
+        resetUploadForm();
+        fetchItems();
+      } catch (err: any) {
+        toast({ title: "যুক্ত করতে ব্যর্থ", description: err.message, variant: "destructive" });
+      }
+      setUploading(false);
+      return;
+    }
+
+    // File upload mode
+    if (!pdfFile || !uploadTitle.trim()) return;
     setUploading(true);
 
     try {
-      // Upload PDF
       const pdfPath = `pdfs/${Date.now()}_${pdfFile.name}`;
-      const { error: pdfErr } = await supabase.storage.from("library").upload(pdfPath, pdfFile);
-      if (pdfErr) throw pdfErr;
+      const { error: pdfErr } = await supabase.storage.from("library").upload(pdfPath, pdfFile, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (pdfErr) {
+        console.error("PDF upload error:", pdfErr);
+        throw new Error(`PDF আপলোড ব্যর্থ: ${pdfErr.message}`);
+      }
       const { data: pdfUrlData } = supabase.storage.from("library").getPublicUrl(pdfPath);
 
-      // Upload thumbnail if provided
       let thumbnailUrl: string | null = null;
       if (thumbFile) {
         const thumbPath = `thumbnails/${Date.now()}_${thumbFile.name}`;
         const { error: thumbErr } = await supabase.storage.from("library").upload(thumbPath, thumbFile);
-        if (thumbErr) throw thumbErr;
-        const { data: thumbUrlData } = supabase.storage.from("library").getPublicUrl(thumbPath);
-        thumbnailUrl = thumbUrlData.publicUrl;
+        if (thumbErr) console.error("Thumb upload error:", thumbErr);
+        else {
+          const { data: thumbUrlData } = supabase.storage.from("library").getPublicUrl(thumbPath);
+          thumbnailUrl = thumbUrlData.publicUrl;
+        }
       }
 
       const { error: insertErr } = await supabase.from("library_items").insert({
@@ -206,6 +274,7 @@ const Library = () => {
       resetUploadForm();
       fetchItems();
     } catch (err: any) {
+      console.error("Upload error details:", err);
       toast({ title: "আপলোড ব্যর্থ", description: err.message, variant: "destructive" });
     }
     setUploading(false);
@@ -216,6 +285,8 @@ const Library = () => {
     setUploadDesc("");
     setUploadSubject("");
     setUploadClass("");
+    setUploadDriveUrl("");
+    setUploadMode("file");
     setPdfFile(null);
     setThumbFile(null);
     setThumbPreview(null);
@@ -237,7 +308,7 @@ const Library = () => {
 
   // PDF Viewer overlay
   if (viewingPdf) {
-    const pdfSrc = pdfBlobUrl || `${viewingPdf.pdf_url}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`;
+    const pdfSrc = pdfBlobUrl || viewingPdf.pdf_url;
     return (
       <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex flex-col">
         <div className="glass-card border-b border-border/50 p-4 flex items-center justify-between">
@@ -259,11 +330,9 @@ const Library = () => {
             src={pdfSrc}
             className="w-full h-full border-0"
             title={viewingPdf.title}
-            style={{ pointerEvents: "auto" }}
+            allow="autoplay"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
           />
-        </div>
-        <div className="glass-card border-t border-border/50 p-3 text-center">
-          <p className="text-xs text-muted-foreground">📖 শুধুমাত্র পড়ার জন্য — ডাউনলোড অনুমোদিত নয়</p>
         </div>
       </div>
     );
@@ -342,20 +411,14 @@ const Library = () => {
               className={`glass-card-hover rounded-2xl overflow-hidden cursor-pointer group relative ${downloadingId === item.id ? "pointer-events-none opacity-70" : ""}`}
               onClick={() => handleOpenPdf(item)}
             >
-              {/* Thumbnail */}
               <div className="aspect-[3/4] relative overflow-hidden bg-muted/20">
                 {item.thumbnail_url ? (
-                  <img
-                    src={item.thumbnail_url}
-                    alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
+                  <img src={item.thumbnail_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-secondary/10">
                     <FileText className="w-12 h-12 text-muted-foreground/40" />
                   </div>
                 )}
-                {/* Overlay on hover / downloading */}
                 <div className={`absolute inset-0 bg-background/60 backdrop-blur-sm transition-opacity flex items-center justify-center ${downloadingId === item.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                   {downloadingId === item.id ? (
                     <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -365,35 +428,24 @@ const Library = () => {
                     </div>
                   )}
                 </div>
-                {/* Cached badge */}
                 {cachedIds.has(item.id) && (
                   <div className="absolute top-2 right-2 bg-emerald-500/90 text-white text-[9px] px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
                     <CheckCircle2 className="w-2.5 h-2.5" /> অফলাইন
                   </div>
                 )}
               </div>
-              {/* Info */}
               <div className="p-3 space-y-1">
                 <h3 className="text-sm font-semibold leading-tight line-clamp-2">{item.title}</h3>
                 {item.subject && (
-                  <span className="inline-block text-[10px] px-2 py-0.5 rounded-md bg-primary/10 text-primary font-medium">
-                    {item.subject}
-                  </span>
+                  <span className="inline-block text-[10px] px-2 py-0.5 rounded-md bg-primary/10 text-primary font-medium">{item.subject}</span>
                 )}
                 {item.class_level && (
-                  <span className="inline-block text-[10px] px-2 py-0.5 rounded-md bg-secondary/10 text-secondary font-medium ml-1">
-                    ক্লাস {item.class_level}
-                  </span>
+                  <span className="inline-block text-[10px] px-2 py-0.5 rounded-md bg-secondary/10 text-secondary font-medium ml-1">ক্লাস {item.class_level}</span>
                 )}
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Eye className="w-3 h-3" /> {item.view_count}
-                  </span>
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Eye className="w-3 h-3" /> {item.view_count}</span>
                   {isAdmin && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
-                      className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                    >
+                    <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -422,78 +474,84 @@ const Library = () => {
               className="glass-card rounded-2xl p-6 w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between">
-                <h2 className="font-display font-bold text-lg">নতুন PDF আপলোড</h2>
+                <h2 className="font-display font-bold text-lg">নতুন বই যুক্ত করো</h2>
                 <Button variant="ghost" size="icon" onClick={() => setShowUpload(false)} className="rounded-xl">
                   <X className="w-5 h-5" />
                 </Button>
               </div>
 
-              {/* Title */}
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">শিরোনাম *</label>
-                <input
-                  type="text"
-                  value={uploadTitle}
-                  onChange={(e) => setUploadTitle(e.target.value)}
-                  placeholder="বইয়ের নাম লেখো..."
-                  className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors"
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">বিবরণ</label>
-                <textarea
-                  value={uploadDesc}
-                  onChange={(e) => setUploadDesc(e.target.value)}
-                  placeholder="সংক্ষিপ্ত বিবরণ..."
-                  rows={2}
-                  className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors resize-none"
-                />
-              </div>
-
-              {/* Subject & Class */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">বিষয়ের নাম</label>
-                  <input
-                    type="text"
-                    value={uploadSubject}
-                    onChange={(e) => setUploadSubject(e.target.value)}
-                    placeholder="যেমন: গণিত, পদার্থবিজ্ঞান..."
-                    className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">ক্লাস</label>
-                  <input
-                    type="text"
-                    value={uploadClass}
-                    onChange={(e) => setUploadClass(e.target.value)}
-                    placeholder="যেমন: 9, 10..."
-                    className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
-                  />
-                </div>
-              </div>
-
-              {/* PDF Upload */}
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">PDF ফাইল *</label>
-                <input ref={pdfInputRef} type="file" accept=".pdf" onChange={(e) => setPdfFile(e.target.files?.[0] || null)} className="hidden" />
+              {/* Upload mode tabs */}
+              <div className="flex gap-2">
                 <button
-                  onClick={() => pdfInputRef.current?.click()}
-                  className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 border-dashed transition-colors ${
-                    pdfFile ? "border-primary/40 bg-primary/5" : "border-border/50 hover:border-primary/30 bg-muted/10"
+                  onClick={() => setUploadMode("file")}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    uploadMode === "file" ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"
                   }`}
                 >
-                  <FileText className={`w-6 h-6 ${pdfFile ? "text-primary" : "text-muted-foreground"}`} />
-                  <span className="text-sm truncate">{pdfFile ? pdfFile.name : "PDF সিলেক্ট করো"}</span>
+                  <Upload className="w-4 h-4" /> PDF আপলোড
+                </button>
+                <button
+                  onClick={() => setUploadMode("url")}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    uploadMode === "url" ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"
+                  }`}
+                >
+                  <Link2 className="w-4 h-4" /> Drive/URL লিংক
                 </button>
               </div>
 
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">শিরোনাম *</label>
+                <input type="text" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} placeholder="বইয়ের নাম লেখো..." className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors" />
+              </div>
+
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">বিবরণ</label>
+                <textarea value={uploadDesc} onChange={(e) => setUploadDesc(e.target.value)} placeholder="সংক্ষিপ্ত বিবরণ..." rows={2} className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors resize-none" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">বিষয়ের নাম</label>
+                  <input type="text" value={uploadSubject} onChange={(e) => setUploadSubject(e.target.value)} placeholder="যেমন: গণিত..." className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">ক্লাস</label>
+                  <input type="text" value={uploadClass} onChange={(e) => setUploadClass(e.target.value)} placeholder="যেমন: 9, 10..." className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground" />
+                </div>
+              </div>
+
+              {uploadMode === "file" ? (
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">PDF ফাইল *</label>
+                  <input ref={pdfInputRef} type="file" accept=".pdf" onChange={(e) => setPdfFile(e.target.files?.[0] || null)} className="hidden" />
+                  <button
+                    onClick={() => pdfInputRef.current?.click()}
+                    className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 border-dashed transition-colors ${
+                      pdfFile ? "border-primary/40 bg-primary/5" : "border-border/50 hover:border-primary/30 bg-muted/10"
+                    }`}
+                  >
+                    <FileText className={`w-6 h-6 ${pdfFile ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className="text-sm truncate">{pdfFile ? pdfFile.name : "PDF সিলেক্ট করো (কোন সাইজ লিমিট নেই)"}</span>
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Google Drive বা PDF লিংক *</label>
+                  <input
+                    type="url"
+                    value={uploadDriveUrl}
+                    onChange={(e) => setUploadDriveUrl(e.target.value)}
+                    placeholder="https://drive.google.com/file/d/... অথবা PDF URL পেস্ট করো"
+                    className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Google Drive, Dropbox, বা যেকোনো পাবলিক PDF লিংক দাও</p>
+                </div>
+              )}
+
               {/* Thumbnail Upload */}
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">থাম্বনেইল (ঐচ্ছিক)</label>
+                <label className="text-xs text-muted-foreground mb-1 block">কভার ছবি (ঐচ্ছিক)</label>
                 <input ref={thumbInputRef} type="file" accept="image/*" onChange={handleThumbSelect} className="hidden" />
                 <button
                   onClick={() => thumbInputRef.current?.click()}
@@ -514,10 +572,10 @@ const Library = () => {
                 variant="glow"
                 className="w-full rounded-xl gap-2"
                 onClick={handleUpload}
-                disabled={uploading || !pdfFile || !uploadTitle.trim()}
+                disabled={uploading || (uploadMode === "file" ? !pdfFile : !uploadDriveUrl.trim()) || !uploadTitle.trim()}
               >
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                আপলোড করো
+                {uploadMode === "file" ? "আপলোড করো" : "যুক্ত করো"}
               </Button>
             </motion.div>
           </motion.div>
