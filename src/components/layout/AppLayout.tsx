@@ -9,6 +9,7 @@ const navItems = [
   { to: "/notebook", icon: BookOpen, label: "নোটবুক" },
   { to: "/library", icon: Library, label: "লাইব্রেরী" },
   { to: "/quiz", icon: Brain, label: "কুইজ" },
+  { to: "/exam", icon: ClipboardList, label: "পরীক্ষা" },
   { to: "/create-content", icon: Sparkles, label: "কনটেন্ট" },
   { to: "/settings", icon: Settings, label: "সেটিংস" },
 ];
