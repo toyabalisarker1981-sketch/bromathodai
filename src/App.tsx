@@ -41,6 +41,7 @@ const App = () => (
               <Route path="/library" element={<Library />} />
               <Route path="/quiz" element={<Quiz />} />
               <Route path="/create-content" element={<CreateContent />} />
+              <Route path="/exam" element={<Exam />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/landing" replace />} />
