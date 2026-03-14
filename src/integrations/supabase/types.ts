@@ -14,6 +14,201 @@ export type Database = {
   }
   public: {
     Tables: {
+      community_exams: {
+        Row: {
+          created_at: string
+          created_by: string
+          duration_minutes: number
+          exam_type: string
+          group_id: string | null
+          id: string
+          is_active: boolean
+          question_count: number
+          questions: Json
+          subject: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          duration_minutes?: number
+          exam_type?: string
+          group_id?: string | null
+          id?: string
+          is_active?: boolean
+          question_count?: number
+          questions?: Json
+          subject: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          duration_minutes?: number
+          exam_type?: string
+          group_id?: string | null
+          id?: string
+          is_active?: boolean
+          question_count?: number
+          questions?: Json
+          subject?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_exams_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_results: {
+        Row: {
+          accuracy: number
+          answers: Json | null
+          completed_at: string
+          exam_id: string | null
+          id: string
+          score: number
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number
+          answers?: Json | null
+          completed_at?: string
+          exam_id?: string | null
+          id?: string
+          score?: number
+          total_questions: number
+          user_id: string
+        }
+        Update: {
+          accuracy?: number
+          answers?: Json | null
+          completed_at?: string
+          exam_id?: string | null
+          id?: string
+          score?: number
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_results_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "community_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      friend_requests: {
+        Row: {
+          created_at: string
+          from_user_id: string
+          id: string
+          status: string
+          to_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_user_id: string
+          id?: string
+          status?: string
+          to_user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          status?: string
+          to_user_id?: string
+        }
+        Relationships: []
+      }
+      friends: {
+        Row: {
+          created_at: string
+          friend_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          friend_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          friend_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       library_items: {
         Row: {
           class_level: number | null
@@ -128,6 +323,83 @@ export type Database = {
           updated_at?: string
           user_id?: string
           xp?: number | null
+        }
+        Relationships: []
+      }
+      reading_progress: {
+        Row: {
+          id: string
+          last_page: number | null
+          last_read_at: string
+          library_item_id: string
+          total_pages: number | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          last_page?: number | null
+          last_read_at?: string
+          library_item_id: string
+          total_pages?: number | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          last_page?: number | null
+          last_read_at?: string
+          library_item_id?: string
+          total_pages?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_progress_library_item_id_fkey"
+            columns: ["library_item_id"]
+            isOneToOne: false
+            referencedRelation: "library_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      study_tube_videos: {
+        Row: {
+          added_by: string
+          class_level: number | null
+          created_at: string
+          id: string
+          subject: string | null
+          thumbnail_url: string | null
+          title: string
+          topic: string | null
+          view_count: number | null
+          youtube_id: string
+          youtube_url: string
+        }
+        Insert: {
+          added_by: string
+          class_level?: number | null
+          created_at?: string
+          id?: string
+          subject?: string | null
+          thumbnail_url?: string | null
+          title: string
+          topic?: string | null
+          view_count?: number | null
+          youtube_id: string
+          youtube_url: string
+        }
+        Update: {
+          added_by?: string
+          class_level?: number | null
+          created_at?: string
+          id?: string
+          subject?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          topic?: string | null
+          view_count?: number | null
+          youtube_id?: string
+          youtube_url?: string
         }
         Relationships: []
       }
