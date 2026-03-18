@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Medal, Star, Flame, Crown, TrendingUp, X, Mail, UserPlus, Sparkles } from "lucide-react";
+import { Trophy, Medal, Star, Flame, Crown, TrendingUp, X, Mail, UserPlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -36,56 +36,21 @@ const Leaderboard = () => {
   const [loading, setLoading] = useState(true);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myProfile, setMyProfile] = useState<LeaderboardEntry | null>(null);
-  const [myClass, setMyClass] = useState<number | null>(null);
+  
   const [selectedUser, setSelectedUser] = useState<LeaderboardEntry | null>(null);
   const [examCount, setExamCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
-
-    const loadClassAndLeaderboard = async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("student_class")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) {
-        setMyClass(null);
-        setEntries([]);
-        setMyRank(null);
-        setMyProfile(null);
-        setLoading(false);
-        return;
-      }
-
-      const metadataClass = typeof user.user_metadata?.student_class === "number"
-        ? user.user_metadata.student_class
-        : null;
-      const resolvedClass = data?.student_class ?? metadataClass;
-
-      setMyClass(resolvedClass);
-      fetchLeaderboard(resolvedClass);
-    };
-
-    loadClassAndLeaderboard();
+    fetchLeaderboard();
   }, [user]);
 
-  const fetchLeaderboard = async (studentClass: number | null) => {
+  const fetchLeaderboard = async () => {
     setLoading(true);
-
-    if (studentClass === null) {
-      setEntries([]);
-      setMyRank(null);
-      setMyProfile(null);
-      setLoading(false);
-      return;
-    }
 
     const { data, error } = await supabase
       .from("profiles")
       .select("user_id, full_name, xp, level, streak_days, student_class, email")
-      .eq("student_class", studentClass)
       .order("xp", { ascending: false });
 
     if (error || !data) {
@@ -136,18 +101,6 @@ const Leaderboard = () => {
         <p className="text-sm text-muted-foreground mt-1">সেরা স্টুডেন্টদের র‍্যাংকিং 🏆</p>
       </motion.div>
 
-      {myClass !== null && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-          className="liquid-glass rounded-2xl px-4 py-3 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary" />
-          </div>
-          <div>
-            <span className="text-sm font-semibold">ক্লাস {myClass}</span>
-            <p className="text-[10px] text-muted-foreground">তোমার ক্লাসের র‍্যাংকিং</p>
-          </div>
-        </motion.div>
-      )}
 
       {myProfile && myRank && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -173,7 +126,7 @@ const Leaderboard = () => {
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-2">
         <h3 className="text-sm font-semibold">
-          {myClass !== null ? `ক্লাস ${myClass} এর স্টুডেন্ট` : "ক্লাস সেট করা হয়নি"}
+          সকল স্টুডেন্ট
           <span className="text-muted-foreground font-normal ml-1">({entries.length} জন)</span>
         </h3>
         {loading ? (
@@ -183,12 +136,8 @@ const Leaderboard = () => {
         ) : entries.length === 0 ? (
           <div className="liquid-glass rounded-2xl p-8 text-center">
             <Trophy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">
-              {myClass !== null ? "তোমার ক্লাসের অন্য ইউজার এখনো নেই" : "তোমার ক্লাস সেট করা নেই"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {myClass !== null ? "যারা ক্লাস সেট করবে, তারা এখানে দেখাবে" : "Settings থেকে ক্লাস সেট করলে শুধু তোমার ক্লাসের ইউজার দেখাবে"}
-            </p>
+            <p className="text-sm text-muted-foreground">এখনো কোনো স্টুডেন্ট নেই</p>
+            <p className="text-xs text-muted-foreground mt-1">কুইজ বা পরীক্ষা দিয়ে XP অর্জন করো!</p>
           </div>
         ) : (
           entries.map((entry, i) => {
