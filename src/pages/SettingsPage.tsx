@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import developerPhoto from "@/assets/developer-photo.png";
 import { Settings, User, GraduationCap, Languages, Save, Check, Shield, LogOut, Mail, Edit3, HelpCircle, Info, ChevronDown, ChevronUp, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -120,9 +121,24 @@ const SettingsPage = () => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({ full_name: fullName || null, student_class: studentClass ? parseInt(studentClass) : null, language }).eq("user_id", user.id);
-    if (error) toast({ title: "সেভ ব্যর্থ", description: error.message, variant: "destructive" });
-    else { setSaved(true); setEditing(false); toast({ title: "সেটিংস সেভ হয়েছে! ✅" }); setTimeout(() => setSaved(false), 2000); }
+    const updateData = { 
+      full_name: fullName || null, 
+      student_class: studentClass ? parseInt(studentClass) : null, 
+      language 
+    };
+    const { error } = await supabase.from("profiles").update(updateData).eq("user_id", user.id);
+    if (error) {
+      toast({ title: "সেভ ব্যর্থ", description: error.message, variant: "destructive" });
+    } else {
+      // Also update user metadata so it persists across sessions
+      await supabase.auth.updateUser({
+        data: { full_name: fullName, student_class: studentClass ? parseInt(studentClass) : null }
+      });
+      setSaved(true); 
+      setEditing(false); 
+      toast({ title: "সেটিংস সেভ হয়েছে! ✅" }); 
+      setTimeout(() => setSaved(false), 2000);
+    }
     setSaving(false);
   };
 
@@ -295,13 +311,24 @@ const SettingsPage = () => {
       </motion.div>
 
       {/* Developer Information */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-2xl p-5 space-y-3">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-2xl p-5 space-y-4">
         <h2 className="font-display font-semibold text-sm flex items-center gap-2">
           <span className="text-lg">👨‍💻</span> Developer Information
         </h2>
+        
+        {/* Developer Photo */}
+        <div className="flex flex-col items-center gap-3 pb-3 border-b border-border/30">
+          <div className="w-24 h-24 rounded-full overflow-hidden ring-3 ring-primary/30 ring-offset-2 ring-offset-background shadow-lg">
+            <img src={developerPhoto} alt="MD OTUNU" className="w-full h-full object-cover" />
+          </div>
+          <div className="text-center">
+            <p className="font-display font-bold text-base">MD OTUNU</p>
+            <p className="text-xs text-muted-foreground">App Developer & Creator</p>
+          </div>
+        </div>
+
         <div className="space-y-2.5">
           {[
-            { label: "Name", value: "MD OTUNU", icon: "👤" },
             { label: "WhatsApp", value: "+8801993566618", icon: "📱", href: "https://wa.me/8801993566618" },
             { label: "Email", value: "arfinistyckatonu@gmail.com", icon: "📧", href: "mailto:arfinistyckatonu@gmail.com" },
             { label: "Address", value: "Rangpur, Badarganj, Gupinatpur, Bothat, Kobiraj Para, Bangladesh", icon: "📍" },
