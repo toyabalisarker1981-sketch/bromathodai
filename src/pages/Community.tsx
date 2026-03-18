@@ -323,6 +323,8 @@ const Community = () => {
       if (error) throw error;
 
       toast({ title: "চ্যালেঞ্জ পাঠানো হয়েছে! ⚔️" });
+      const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+      notifyChallengeSent(myProfile?.full_name || "কেউ একজন", challengeTargetFriend.user_id, challengeSubject);
       setShowChallengeModal(false);
       setChallengeSubject(""); setChallengeTopic(""); setChallengeCustomContent("");
       fetchChallenges();
