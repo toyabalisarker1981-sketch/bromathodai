@@ -578,11 +578,16 @@ const Community = () => {
             <p className="text-sm font-semibold">{activeGroup.name}</p>
             <p className="text-xs text-muted-foreground">{members.length} সদস্য</p>
           </div>
-          {activeGroup.created_by === user?.id && (
-            <Button variant="outline" size="sm" className="rounded-lg gap-1 h-8" onClick={() => { setShowInviteModal(activeGroup.id); }}>
-              <UserPlus className="w-3 h-3" /> যোগ
+          <div className="flex gap-1.5">
+            <Button variant="outline" size="sm" className="rounded-lg gap-1 h-8" onClick={() => setShowGroupChallengeModal(true)}>
+              <Swords className="w-3 h-3" /> চ্যালেঞ্জ
             </Button>
-          )}
+            {activeGroup.created_by === user?.id && (
+              <Button variant="outline" size="sm" className="rounded-lg gap-1 h-8" onClick={() => { setShowInviteModal(activeGroup.id); }}>
+                <UserPlus className="w-3 h-3" /> যোগ
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Members strip */}
