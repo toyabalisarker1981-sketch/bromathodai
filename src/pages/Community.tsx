@@ -518,7 +518,7 @@ const Community = () => {
   // Main View
   const navItems = [
     { id: "chats" as MainView, label: "চ্যাট", icon: MessageCircle, badge: totalUnread },
-    { id: "requests" as MainView, label: "রিকোয়েস্ট", icon: Bell, badge: pendingRequests.length + pendingChallenges.filter(c => c.challenged_id === user?.id && c.status === "pending").length },
+    { id: "requests" as MainView, label: "চ্যালেঞ্জ", icon: Swords, badge: pendingChallenges.filter(c => c.challenged_id === user?.id && c.status === "pending").length },
     { id: "groups" as MainView, label: "গ্রুপ", icon: Crown, badge: groups.length },
     { id: "search" as MainView, label: "খুঁজো", icon: Search },
   ];
