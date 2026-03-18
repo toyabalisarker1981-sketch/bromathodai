@@ -42,50 +42,15 @@ const Leaderboard = () => {
 
   useEffect(() => {
     if (!user) return;
-
-    const loadClassAndLeaderboard = async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("student_class")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) {
-        setMyClass(null);
-        setEntries([]);
-        setMyRank(null);
-        setMyProfile(null);
-        setLoading(false);
-        return;
-      }
-
-      const metadataClass = typeof user.user_metadata?.student_class === "number"
-        ? user.user_metadata.student_class
-        : null;
-      const resolvedClass = data?.student_class ?? metadataClass;
-
-      setMyClass(resolvedClass);
-      fetchLeaderboard(resolvedClass);
-    };
-
-    loadClassAndLeaderboard();
+    fetchLeaderboard();
   }, [user]);
 
-  const fetchLeaderboard = async (studentClass: number | null) => {
+  const fetchLeaderboard = async () => {
     setLoading(true);
-
-    if (studentClass === null) {
-      setEntries([]);
-      setMyRank(null);
-      setMyProfile(null);
-      setLoading(false);
-      return;
-    }
 
     const { data, error } = await supabase
       .from("profiles")
       .select("user_id, full_name, xp, level, streak_days, student_class, email")
-      .eq("student_class", studentClass)
       .order("xp", { ascending: false });
 
     if (error || !data) {
