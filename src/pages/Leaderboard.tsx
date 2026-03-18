@@ -240,7 +240,7 @@ const Leaderboard = () => {
               )}
 
               {selectedUser.user_id !== user?.id && (
-                <Button className="w-full rounded-xl gap-1" onClick={() => sendFriendRequest(selectedUser.user_id)}>
+                <Button className="w-full rounded-xl gap-1" onClick={() => addFriendDirectly(selectedUser.user_id)}>
                   <UserPlus className="w-4 h-4" /> বন্ধু যোগ করো
                 </Button>
               )}
