@@ -63,6 +63,7 @@ const Library = () => {
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userClass, setUserClass] = useState<number | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [viewingPdf, setViewingPdf] = useState<LibraryItem | null>(null);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
@@ -86,9 +87,17 @@ const Library = () => {
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchItems();
+    if (!user) return;
     checkAdmin();
+    supabase.from("profiles").select("student_class").eq("user_id", user.id).single()
+      .then(({ data }) => {
+        if (data?.student_class) setUserClass(data.student_class);
+      });
   }, [user]);
+
+  useEffect(() => {
+    if (userClass !== null || isAdmin) fetchItems();
+  }, [userClass, isAdmin]);
 
   useEffect(() => {
     const checkCachedItems = async () => {
@@ -109,10 +118,17 @@ const Library = () => {
 
   const fetchItems = async () => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .from("library_items")
       .select("*")
       .order("created_at", { ascending: false });
+
+    // Non-admin users only see their own class
+    if (!isAdmin && userClass) {
+      query = query.eq("class_level", userClass);
+    }
+
+    const { data } = await query;
     if (data) setItems(data as LibraryItem[]);
     setLoading(false);
   };

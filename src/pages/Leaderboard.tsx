@@ -30,10 +30,7 @@ const getRankIcon = (rank: number) => {
   return <span className="w-6 h-6 flex items-center justify-center text-sm font-bold text-muted-foreground">{rank}</span>;
 };
 
-const CLASS_OPTIONS = [
-  { value: "all", label: "সবাই" },
-  ...Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `ক্লাস ${i + 1}` })),
-];
+// No class options - user only sees their own class
 
 const Leaderboard = () => {
   const { user } = useAuth();
@@ -41,8 +38,7 @@ const Leaderboard = () => {
   const [loading, setLoading] = useState(true);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myProfile, setMyProfile] = useState<LeaderboardEntry | null>(null);
-  const [myClass, setMyClass] = useState<string>("all");
-  const [filterClass, setFilterClass] = useState<string>("all");
+  const [myClass, setMyClass] = useState<number | null>(null);
   const [selectedUser, setSelectedUser] = useState<LeaderboardEntry | null>(null);
   const [examCount, setExamCount] = useState(0);
 
@@ -51,30 +47,24 @@ const Leaderboard = () => {
     supabase.from("profiles").select("student_class").eq("user_id", user.id).single()
       .then(({ data }) => {
         if (data?.student_class) {
-          const cls = String(data.student_class);
-          setMyClass(cls);
-          setFilterClass(cls);
+          setMyClass(data.student_class);
         }
       });
   }, [user]);
 
   useEffect(() => {
-    fetchLeaderboard();
-  }, [user, filterClass]);
+    if (myClass) fetchLeaderboard();
+  }, [user, myClass]);
 
   const fetchLeaderboard = async () => {
+    if (!myClass) return;
     setLoading(true);
-    let query = supabase
+    const { data } = await supabase
       .from("profiles")
       .select("user_id, full_name, xp, level, streak_days, student_class, email")
+      .eq("student_class", myClass)
       .order("xp", { ascending: false })
       .limit(100);
-
-    if (filterClass !== "all") {
-      query = query.eq("student_class", parseInt(filterClass));
-    }
-
-    const { data } = await query;
     if (data) {
       setEntries(data as LeaderboardEntry[]);
       if (user) {
@@ -116,19 +106,15 @@ const Leaderboard = () => {
         <p className="text-sm text-muted-foreground mt-1">সেরা স্টুডেন্টদের র‍্যাংকিং 🏆</p>
       </motion.div>
 
-      {/* Class filter - scrollable */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hidden">
-        {CLASS_OPTIONS.map(opt => (
-          <button key={opt.value} onClick={() => setFilterClass(opt.value)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
-              filterClass === opt.value 
-                ? "bg-primary text-primary-foreground shadow-md" 
-                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-            }`}>
-            {opt.label}
-          </button>
-        ))}
-      </div>
+      {/* Class badge */}
+      {myClass && (
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground shadow-md">
+            ক্লাস {myClass}
+          </span>
+          <span className="text-xs text-muted-foreground">তোমার ক্লাসের র‍্যাংকিং</span>
+        </div>
+      )}
 
       {/* My Rank */}
       {myProfile && myRank && (
@@ -155,7 +141,7 @@ const Leaderboard = () => {
       {/* Leaderboard List */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-2">
         <h3 className="text-sm font-semibold">
-          {filterClass === "all" ? "সকল স্টুডেন্ট" : `ক্লাস ${filterClass} এর স্টুডেন্ট`}
+          ক্লাস {myClass} এর স্টুডেন্ট
           <span className="text-muted-foreground font-normal ml-1">({entries.length} জন)</span>
         </h3>
         {loading ? (
@@ -163,10 +149,8 @@ const Leaderboard = () => {
         ) : entries.length === 0 ? (
           <div className="glass-card rounded-2xl p-8 text-center">
             <Trophy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">
-              {filterClass === "all" ? "এখনো কোনো স্টুডেন্ট নেই" : `ক্লাস ${filterClass} তে এখনো কোনো স্টুডেন্ট নেই`}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">অন্য ক্লাস দেখতে উপরের ফিল্টার ব্যবহার করো</p>
+            <p className="text-sm text-muted-foreground">ক্লাস {myClass} তে এখনো কোনো স্টুডেন্ট নেই</p>
+            <p className="text-xs text-muted-foreground mt-1">কুইজ বা পরীক্ষা দিয়ে XP অর্জন করো!</p>
           </div>
         ) : (
           entries.map((entry, i) => {

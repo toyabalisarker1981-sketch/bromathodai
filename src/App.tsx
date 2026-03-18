@@ -15,7 +15,7 @@ import Chat from "@/pages/Chat";
 import Notebook from "@/pages/Notebook";
 import Library from "@/pages/Library";
 import Quiz from "@/pages/Quiz";
-import CreateContent from "@/pages/CreateContent";
+import Calculator from "@/pages/Calculator";
 import Exam from "@/pages/Exam";
 import Community from "@/pages/Community";
 import StudyTube from "@/pages/StudyTube";
@@ -43,7 +43,7 @@ const App = () => (
               <Route path="/notebook" element={<Notebook />} />
               <Route path="/library" element={<Library />} />
               <Route path="/quiz" element={<Quiz />} />
-              <Route path="/create-content" element={<CreateContent />} />
+              <Route path="/calculator" element={<Calculator />} />
               <Route path="/exam" element={<Exam />} />
               <Route path="/community" element={<Community />} />
               <Route path="/studytube" element={<StudyTube />} />
