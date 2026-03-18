@@ -235,20 +235,26 @@ const SettingsPage = () => {
           </div>
         </button>
         {showAbout && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 glass-card rounded-xl p-5 space-y-3">
-            <h3 className="text-base font-display font-bold gradient-text">BRO MATHOD Ai</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              BRO MATHOD Ai হলো বাংলাদেশী স্টুডেন্টদের জন্য তৈরি একটি <strong className="text-foreground">সম্পূর্ণ ফ্রি AI-পাওয়ার্ড শিক্ষা প্ল্যাটফর্ম</strong>। NCTB সিলেবাস অনুযায়ী ক্লাস ১ থেকে HSC পর্যন্ত সকল ছাত্র-ছাত্রী এখানে পড়াশোনা করতে পারবে।
-            </p>
-            <div className="space-y-2 text-xs text-muted-foreground">
-              <p><strong className="text-foreground">🎯 উদ্দেশ্য:</strong> প্রতিটি ছাত্র-ছাত্রীর কাছে উন্নতমানের শিক্ষা পৌঁছে দেওয়া।</p>
-              <p><strong className="text-foreground">🤖 AI টিউটর:</strong> বন্ধুর মতো করে যেকোনো বিষয় বোঝায়, ছবি থেকে সমাধান করে।</p>
-              <p><strong className="text-foreground">📋 পরীক্ষা মোড:</strong> OMR স্টাইল MCQ পরীক্ষা, AI স্ক্যানিং ও স্বয়ংক্রিয় গ্রেডিং।</p>
-              <p><strong className="text-foreground">👥 কমিউনিটি:</strong> বন্ধু যোগ করো, গ্রুপে একসাথে পরীক্ষা দাও, র‍্যাংকিং দেখো।</p>
-              <p><strong className="text-foreground">🎬 StudyTube:</strong> শিক্ষামূলক ভিডিও প্ল্যাটফর্ম — AI সেরা ভিডিও সাজেস্ট করে।</p>
-              <p><strong className="text-foreground">🏆 লিডারবোর্ড:</strong> Beginner → Advanced → Top Performer লেভেল সিস্টেম।</p>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 glass-card rounded-xl p-5 space-y-4">
+            <h3 className="text-lg font-display font-bold gradient-text">About This App</h3>
+            
+            <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+              <p>এই অ্যাপটি তৈরি করার মূল উদ্দেশ্য খুবই সাধারণ, কিন্তু গুরুত্বপূর্ণ।</p>
+              
+              <p>বাংলাদেশে অনেক শিক্ষার্থী আছে যারা কঠোর পরিশ্রম (<strong className="text-foreground">hard work</strong>) করে, কিন্তু সেই অনুযায়ী কাঙ্ক্ষিত ফলাফল সবসময় পায় না। বর্তমান যুগে শুধু পরিশ্রম করলেই হয় না—এর সাথে প্রয়োজন <strong className="text-foreground">স্মার্টভাবে (smart work)</strong> পড়াশোনা করা। সঠিক পদ্ধতিতে, সময় বাঁচিয়ে এবং পরিকল্পিতভাবে পড়লে একই পরিশ্রমে আরও ভালো ফলাফল অর্জন করা সম্ভব।</p>
+              
+              <p>আমরা প্রায়ই দেখি, অনেক শিক্ষার্থী বিশাল সিলেবাস সামলেও ভালো ফল করে। এর পেছনে শুধু পরিশ্রম নয়, বরং <strong className="text-foreground">সঠিক কৌশল ও স্মার্ট স্টাডি মেথড</strong> বড় ভূমিকা রাখে।</p>
+              
+              <p>বর্তমানে এমন অনেক ওয়েবসাইট ও প্ল্যাটফর্ম রয়েছে যা পড়াশোনায় সাহায্য করে, কিন্তু বেশিরভাগ ক্ষেত্রেই সেগুলোর ব্যবহার সীমাবদ্ধ থাকে—একটা নির্দিষ্ট সীমার পর আর ব্যবহার করা যায় না। এই সীমাবদ্ধতাগুলো দূর করার চিন্তা থেকেই এই অ্যাপটি তৈরি করা হয়েছে।</p>
+              
+              <p>এই অ্যাপটি একটি <strong className="text-foreground">সম্পূর্ণ ফ্রি, AI-ভিত্তিক স্টাডি প্ল্যাটফর্ম</strong>, যেখানে পড়াশোনার সহায়তা, পরীক্ষার প্রস্তুতি এবং আরও নানা দরকারি ফিচার একসাথে পাওয়া যাবে। এটি এমনভাবে ডিজাইন করা হয়েছে যাতে <strong className="text-foreground">ক্লাস ১ থেকে ১২</strong> পর্যন্ত সকল শিক্ষার্থী সহজেই ব্যবহার করতে পারে।</p>
+              
+              <p>আমাদের লক্ষ্য হলো—শিক্ষার্থীদের শুধু পরিশ্রমী নয়, বরং <strong className="text-foreground">স্মার্ট লার্নার</strong> হিসেবে গড়ে তুলতে সাহায্য করা। যাতে তারা কম সময়ে, সঠিক উপায়ে, আরও ভালো ফলাফল অর্জন করতে পারে।</p>
+              
+              <p className="text-primary font-medium">এই অ্যাপটি সবার জন্য উন্মুক্ত—যে কেউ, যেকোনো সময়, নিজের পড়াশোনাকে আরও এক ধাপ এগিয়ে নিতে এটি ব্যবহার করতে পারবে। ✨</p>
             </div>
-            <p className="text-xs text-muted-foreground border-t border-border/30 pt-3"><strong className="text-foreground">ডেভেলপার:</strong> MD. Otunu · © {new Date().getFullYear()} BRO MATHOD Ai</p>
+            
+            <p className="text-xs text-muted-foreground border-t border-border/30 pt-3">© {new Date().getFullYear()} BRO MATHOD Ai — সবার জন্য শিক্ষা</p>
           </motion.div>
         )}
       </motion.div>
@@ -261,7 +267,34 @@ const SettingsPage = () => {
         </div>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+      {/* Developer Information */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-2xl p-5 space-y-3">
+        <h2 className="font-display font-semibold text-sm flex items-center gap-2">
+          <span className="text-lg">👨‍💻</span> Developer Information
+        </h2>
+        <div className="space-y-2.5">
+          {[
+            { label: "Name", value: "MD OTUNU", icon: "👤" },
+            { label: "WhatsApp", value: "+8801993566618", icon: "📱", href: "https://wa.me/8801993566618" },
+            { label: "Email", value: "arfinistyckatonu@gmail.com", icon: "📧", href: "mailto:arfinistyckatonu@gmail.com" },
+            { label: "Address", value: "Rangpur, Badarganj, Gupinatpur, Bothat, Kobiraj Para, Bangladesh", icon: "📍" },
+          ].map((item, i) => (
+            <div key={i} className="flex items-start gap-3 p-2.5 rounded-xl bg-muted/20">
+              <span className="text-base flex-shrink-0">{item.icon}</span>
+              <div>
+                <p className="text-xs text-muted-foreground">{item.label}</p>
+                {item.href ? (
+                  <a href={item.href} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline">{item.value}</a>
+                ) : (
+                  <p className="text-sm font-medium">{item.value}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
         <Button variant="outline" className="w-full rounded-xl gap-2 border-destructive/30 text-destructive hover:bg-destructive/10" onClick={handleSignOut}>
           <LogOut className="w-4 h-4" /> সাইন আউট
         </Button>
