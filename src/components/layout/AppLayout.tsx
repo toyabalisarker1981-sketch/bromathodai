@@ -25,7 +25,7 @@ const AppLayout = () => {
       <div className="fixed inset-0 pointer-events-none" style={{ background: "var(--gradient-glow)" }} />
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-20 lg:w-64 fixed inset-y-0 left-0 z-40 border-r border-white/[0.06] bg-background/40 backdrop-blur-2xl">
+      <aside className="hidden md:flex flex-col w-20 lg:w-64 fixed inset-y-0 left-0 z-40 border-r border-white/[0.06] bg-background/30 backdrop-blur-3xl">
         <div className="flex items-center gap-3 p-4 lg:px-6 h-16 border-b border-white/[0.06]">
           <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/10">
             <Brain className="w-5 h-5 text-primary" />
