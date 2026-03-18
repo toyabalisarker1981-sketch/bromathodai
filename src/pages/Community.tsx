@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { notifyNewMessage, notifyChallengeSent, notifyChallengeCompleted, notifyGroupChallenge, notifyGroupMessage, notifyFriendAdded, notifyGroupInvite } from "@/lib/notifications";
 
 type MainView = "chats" | "requests" | "groups" | "search";
 
