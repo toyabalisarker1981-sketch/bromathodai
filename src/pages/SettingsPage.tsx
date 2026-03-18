@@ -311,13 +311,24 @@ const SettingsPage = () => {
       </motion.div>
 
       {/* Developer Information */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-2xl p-5 space-y-3">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-2xl p-5 space-y-4">
         <h2 className="font-display font-semibold text-sm flex items-center gap-2">
           <span className="text-lg">👨‍💻</span> Developer Information
         </h2>
+        
+        {/* Developer Photo */}
+        <div className="flex flex-col items-center gap-3 pb-3 border-b border-border/30">
+          <div className="w-24 h-24 rounded-full overflow-hidden ring-3 ring-primary/30 ring-offset-2 ring-offset-background shadow-lg">
+            <img src={developerPhoto} alt="MD OTUNU" className="w-full h-full object-cover" />
+          </div>
+          <div className="text-center">
+            <p className="font-display font-bold text-base">MD OTUNU</p>
+            <p className="text-xs text-muted-foreground">App Developer & Creator</p>
+          </div>
+        </div>
+
         <div className="space-y-2.5">
           {[
-            { label: "Name", value: "MD OTUNU", icon: "👤" },
             { label: "WhatsApp", value: "+8801993566618", icon: "📱", href: "https://wa.me/8801993566618" },
             { label: "Email", value: "arfinistyckatonu@gmail.com", icon: "📧", href: "mailto:arfinistyckatonu@gmail.com" },
             { label: "Address", value: "Rangpur, Badarganj, Gupinatpur, Bothat, Kobiraj Para, Bangladesh", icon: "📍" },
