@@ -217,8 +217,6 @@ const Community = () => {
     setSearchResults(prev => prev.filter(r => r.user_id !== toUserId));
     fetchAll();
   };
-    fetchRequests();
-  };
 
   const deleteGroup = async (groupId: string) => {
     if (!user) return;
