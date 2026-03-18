@@ -279,7 +279,17 @@ const Community = () => {
     if (!newGroupMessage.trim() || !user || !activeGroup) return;
     setSendingGroupMessage(true);
     const { error } = await supabase.from("group_messages").insert({ group_id: activeGroup.id, sender_id: user.id, content: newGroupMessage.trim() });
-    if (!error) setNewGroupMessage("");
+    if (!error) {
+      setNewGroupMessage("");
+      // Notify other group members
+      const members = groupMembers[activeGroup.id] || [];
+      const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+      members.forEach(m => {
+        if (m.user_id !== user.id) {
+          notifyGroupMessage(myProfile?.full_name || "কেউ একজন", m.user_id, activeGroup.name);
+        }
+      });
+    }
     setSendingGroupMessage(false);
   };
 
