@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Trophy, Medal, Star, Flame, Crown, TrendingUp, Target } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Trophy, Medal, Star, Flame, Crown, TrendingUp, Target, X, Mail, UserPlus, ClipboardList } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 
 interface LeaderboardEntry {
   user_id: string;
@@ -10,6 +12,8 @@ interface LeaderboardEntry {
   xp: number;
   level: number;
   streak_days: number;
+  student_class: number | null;
+  email?: string | null;
 }
 
 const getLevelTitle = (level: number) => {
@@ -32,29 +36,65 @@ const Leaderboard = () => {
   const [loading, setLoading] = useState(true);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myProfile, setMyProfile] = useState<LeaderboardEntry | null>(null);
+  const [myClass, setMyClass] = useState<number | null>(null);
+  const [filterClass, setFilterClass] = useState<"all" | "myclass">("myclass");
+  const [selectedUser, setSelectedUser] = useState<LeaderboardEntry | null>(null);
+  const [examCount, setExamCount] = useState(0);
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setLoading(true);
-      const { data } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, xp, level, streak_days")
-        .order("xp", { ascending: false })
-        .limit(50);
-      if (data) {
-        setEntries(data as LeaderboardEntry[]);
-        if (user) {
-          const rank = data.findIndex(e => e.user_id === user.id);
-          if (rank !== -1) {
-            setMyRank(rank + 1);
-            setMyProfile(data[rank] as LeaderboardEntry);
-          }
+    if (!user) return;
+    supabase.from("profiles").select("student_class").eq("user_id", user.id).single()
+      .then(({ data }) => {
+        if (data?.student_class) setMyClass(data.student_class);
+      });
+  }, [user]);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [user, myClass, filterClass]);
+
+  const fetchLeaderboard = async () => {
+    setLoading(true);
+    let query = supabase
+      .from("profiles")
+      .select("user_id, full_name, xp, level, streak_days, student_class, email")
+      .order("xp", { ascending: false })
+      .limit(50);
+
+    if (filterClass === "myclass" && myClass) {
+      query = query.eq("student_class", myClass);
+    }
+
+    const { data } = await query;
+    if (data) {
+      setEntries(data as LeaderboardEntry[]);
+      if (user) {
+        const rank = data.findIndex(e => e.user_id === user.id);
+        if (rank !== -1) {
+          setMyRank(rank + 1);
+          setMyProfile(data[rank] as LeaderboardEntry);
         }
       }
-      setLoading(false);
-    };
-    fetchLeaderboard();
-  }, [user]);
+    }
+    setLoading(false);
+  };
+
+  const openProfile = async (entry: LeaderboardEntry) => {
+    setSelectedUser(entry);
+    // Fetch exam count
+    const { count } = await supabase.from("exam_results").select("*", { count: "exact", head: true }).eq("user_id", entry.user_id);
+    setExamCount(count || 0);
+  };
+
+  const sendFriendRequest = async (toUserId: string) => {
+    if (!user) return;
+    const { error } = await supabase.from("friend_requests").insert({ from_user_id: user.id, to_user_id: toUserId });
+    if (error) {
+      toast({ title: "রিকোয়েস্ট পাঠানো ব্যর্থ", variant: "destructive" });
+    } else {
+      toast({ title: "Friend Request পাঠানো হয়েছে! ✅" });
+    }
+  };
 
   return (
     <div className="p-4 lg:p-8 max-w-3xl mx-auto space-y-6">
@@ -62,6 +102,18 @@ const Leaderboard = () => {
         <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Trophy className="w-6 h-6 text-primary" /> লিডারবোর্ড</h1>
         <p className="text-sm text-muted-foreground mt-1">সেরা স্টুডেন্টদের র‍্যাংকিং 🏆</p>
       </motion.div>
+
+      {/* Class filter */}
+      <div className="flex gap-2">
+        <button onClick={() => setFilterClass("myclass")}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${filterClass === "myclass" ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"}`}>
+          {myClass ? `ক্লাস ${myClass}` : "আমার ক্লাস"}
+        </button>
+        <button onClick={() => setFilterClass("all")}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${filterClass === "all" ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"}`}>
+          সবাই
+        </button>
+      </div>
 
       {/* My Rank */}
       {myProfile && myRank && (
@@ -119,7 +171,8 @@ const Leaderboard = () => {
             const isMe = entry.user_id === user?.id;
             return (
               <motion.div key={entry.user_id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
-                className={`glass-card rounded-xl p-4 flex items-center gap-3 ${isMe ? "border-primary/30 bg-primary/5" : ""} ${rank <= 3 ? "border-yellow-500/20" : ""}`}>
+                onClick={() => openProfile(entry)}
+                className={`glass-card rounded-xl p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors ${isMe ? "border-primary/30 bg-primary/5" : ""} ${rank <= 3 ? "border-yellow-500/20" : ""}`}>
                 <div className="flex-shrink-0">{getRankIcon(rank)}</div>
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/15 to-secondary/15 flex items-center justify-center text-xs font-bold">
                   {(entry.full_name || "S")[0].toUpperCase()}
@@ -137,6 +190,69 @@ const Leaderboard = () => {
           })
         )}
       </motion.div>
+
+      {/* User Profile Modal */}
+      <AnimatePresence>
+        {selectedUser && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedUser(null)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-background border border-border rounded-2xl p-6 max-w-sm w-full space-y-4"
+              onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-display font-bold">প্রোফাইল</h3>
+                <button onClick={() => setSelectedUser(null)} className="p-1 rounded-lg hover:bg-muted/30"><X className="w-4 h-4" /></button>
+              </div>
+              
+              <div className="text-center space-y-3">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-2xl font-bold mx-auto">
+                  {(selectedUser.full_name || "S")[0].toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-display font-bold text-lg">{selectedUser.full_name || "Student"}</p>
+                  <p className={`text-sm font-medium ${getLevelTitle(selectedUser.level).color}`}>
+                    {getLevelTitle(selectedUser.level).title}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl bg-primary/10 text-center">
+                  <p className="text-lg font-bold text-primary">{selectedUser.xp}</p>
+                  <p className="text-[10px] text-muted-foreground">XP</p>
+                </div>
+                <div className="p-3 rounded-xl bg-muted/30 text-center">
+                  <p className="text-lg font-bold">{examCount}</p>
+                  <p className="text-[10px] text-muted-foreground">পরীক্ষা</p>
+                </div>
+                <div className="p-3 rounded-xl bg-muted/30 text-center">
+                  <p className="text-lg font-bold">{selectedUser.streak_days}</p>
+                  <p className="text-[10px] text-muted-foreground">স্ট্রিক</p>
+                </div>
+              </div>
+
+              {selectedUser.email && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 rounded-xl bg-muted/20">
+                  <Mail className="w-4 h-4" /> {selectedUser.email}
+                </div>
+              )}
+
+              {selectedUser.student_class && (
+                <p className="text-sm text-muted-foreground text-center">ক্লাস: {selectedUser.student_class}</p>
+              )}
+
+              {selectedUser.user_id !== user?.id && (
+                <div className="flex gap-2">
+                  <Button className="flex-1 rounded-xl gap-1" onClick={() => sendFriendRequest(selectedUser.user_id)}>
+                    <UserPlus className="w-4 h-4" /> বন্ধু যোগ করো
+                  </Button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
