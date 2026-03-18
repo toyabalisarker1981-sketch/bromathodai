@@ -120,29 +120,19 @@ const Quiz = () => {
 
   const finishQuiz = async () => {
     setMode("result");
-    // Update XP and streak
     if (!user) return;
     try {
       const correctCount = answers.filter((a, i) => a === questions[i]?.correctIndex).length;
-      const xpEarned = correctCount * 10 + questions.length * 2; // bonus for attempting
+      const xpEarned = correctCount * 10 + questions.length * 2;
+      const accuracy = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("xp, level, streak_days")
-        .eq("user_id", user.id)
-        .single();
+      // Save quiz result
+      await saveExamResult(user.id, questions.length, correctCount, accuracy, answers);
 
-      if (profile) {
-        const newXp = (profile.xp || 0) + xpEarned;
-        const newLevel = Math.floor(newXp / 500) + 1;
-        const newStreak = (profile.streak_days || 0) + 1;
-
-        await supabase
-          .from("profiles")
-          .update({ xp: newXp, level: newLevel, streak_days: newStreak })
-          .eq("user_id", user.id);
-
-        toast({ title: `+${xpEarned} XP অর্জন! 🎉`, description: `লেভেল ${newLevel} · স্ট্রিক ${newStreak} দিন` });
+      // Update XP with proper daily streak
+      const result = await updateXpAndStreak(user.id, xpEarned);
+      if (result) {
+        toast({ title: `+${result.xpEarned} XP অর্জন! 🎉`, description: `লেভেল ${result.level} · স্ট্রিক ${result.streak_days} দিন` });
       }
     } catch (e) {
       console.error("XP update error:", e);
