@@ -120,7 +120,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {allFeatures.map((feature, i) => (
             <motion.div key={feature.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}
-              onClick={() => navigate(feature.path)} className="glass-card-hover rounded-2xl p-4 cursor-pointer group">
+              onClick={() => navigate(feature.path)} className="liquid-glass-hover rounded-2xl p-4 cursor-pointer group">
               <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-3`}>
                 <feature.icon className="w-5 h-5 text-foreground" />
               </div>
