@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, UserPlus, Search, Check, X, Crown, Plus, Swords, Loader2, Mail, MessageCircle, Send, ArrowLeft, Trash2, Bell, Trophy, Target } from "lucide-react";
+import { Users, UserPlus, Search, X, Crown, Plus, Swords, Loader2, Mail, MessageCircle, Send, ArrowLeft, Trash2, Trophy, FileText, Link, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,11 +9,11 @@ import { toast } from "@/hooks/use-toast";
 type MainView = "chats" | "requests" | "groups" | "search";
 
 interface FriendProfile { user_id: string; full_name: string | null; xp: number; level: number; email?: string | null; student_class?: number | null; }
-
 interface Group { id: string; name: string; description: string | null; created_by: string; created_at: string; }
 interface Message { id: string; sender_id: string; receiver_id: string; content: string; created_at: string; read: boolean; }
+interface GroupMessage { id: string; group_id: string; sender_id: string; content: string; created_at: string; }
 interface ChatPreview { friend: FriendProfile; lastMessage?: Message; unreadCount: number; }
-interface Challenge { id: string; challenger_id: string; challenged_id: string; subject: string; topic: string | null; question_count: number; questions: any; status: string; challenger_score: number | null; challenged_score: number | null; created_at: string; }
+interface Challenge { id: string; challenger_id: string; challenged_id: string; subject: string; topic: string | null; question_count: number; questions: any; status: string; challenger_score: number | null; challenged_score: number | null; challenger_answers: any; challenged_answers: any; created_at: string; completed_at: string | null; }
 
 const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quiz`;
 
@@ -43,6 +43,7 @@ const Community = () => {
   const [challengeSubject, setChallengeSubject] = useState("");
   const [challengeTopic, setChallengeTopic] = useState("");
   const [challengeCount, setChallengeCount] = useState(10);
+  const [challengeCustomContent, setChallengeCustomContent] = useState("");
   const [sendingChallenge, setSendingChallenge] = useState(false);
   const [pendingChallenges, setPendingChallenges] = useState<(Challenge & { profile?: FriendProfile })[]>([]);
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
@@ -51,9 +52,16 @@ const Community = () => {
   const [challengeCurrentQ, setChallengeCurrentQ] = useState(0);
   const [challengeMode, setChallengeMode] = useState<"idle" | "taking" | "result">("idle");
 
-  // Group invite state
+  // Group state
   const [showInviteModal, setShowInviteModal] = useState<string | null>(null);
   const [groupMembers, setGroupMembers] = useState<{ [gid: string]: FriendProfile[] }>({});
+  const [activeGroup, setActiveGroup] = useState<Group | null>(null);
+  const [groupMessages, setGroupMessages] = useState<GroupMessage[]>([]);
+  const [newGroupMessage, setNewGroupMessage] = useState("");
+  const [sendingGroupMessage, setSendingGroupMessage] = useState(false);
+
+  // Challenge target (friend or group)
+  const [challengeTargetFriend, setChallengeTargetFriend] = useState<FriendProfile | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -70,11 +78,15 @@ const Community = () => {
         if (msg.sender_id === user.id || msg.receiver_id === user.id) {
           if (activeChatFriend && (msg.sender_id === activeChatFriend.user_id || msg.receiver_id === activeChatFriend.user_id)) {
             setMessages(prev => [...prev, msg]);
-            if (msg.receiver_id === user.id) {
-              supabase.from("messages").update({ read: true }).eq("id", msg.id);
-            }
+            if (msg.receiver_id === user.id) supabase.from("messages").update({ read: true }).eq("id", msg.id);
           }
           loadChatPreviews();
+        }
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_messages' }, (payload) => {
+        const msg = payload.new as GroupMessage;
+        if (activeGroup && msg.group_id === activeGroup.id) {
+          setGroupMessages(prev => [...prev, msg]);
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'challenges' }, () => {
@@ -82,11 +94,11 @@ const Community = () => {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user, activeChatFriend]);
+  }, [user, activeChatFriend, activeGroup]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, groupMessages]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -106,7 +118,6 @@ const Community = () => {
     }
   };
 
-
   const fetchGroups = async () => {
     if (!user) return;
     const { data: memberData } = await supabase.from("group_members").select("group_id").eq("user_id", user.id);
@@ -123,7 +134,6 @@ const Community = () => {
     if (!user) return;
     const { data } = await supabase.from("challenges").select("*")
       .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`)
-      .in("status", ["pending", "active"])
       .order("created_at", { ascending: false });
     if (data && data.length > 0) {
       const otherIds = data.map(c => c.challenger_id === user.id ? c.challenged_id : c.challenger_id);
@@ -159,6 +169,7 @@ const Community = () => {
   const openChat = async (friend: FriendProfile) => {
     if (!user) return;
     setActiveChatFriend(friend);
+    setActiveGroup(null);
     setChallengeMode("idle");
     const { data } = await supabase.from("messages").select("*")
       .or(`and(sender_id.eq.${user.id},receiver_id.eq.${friend.user_id}),and(sender_id.eq.${friend.user_id},receiver_id.eq.${user.id})`)
@@ -168,7 +179,7 @@ const Community = () => {
     loadChatPreviews();
   };
 
-  const sendMessage = async () => {
+  const sendMessageFn = async () => {
     if (!newMessage.trim() || !user || !activeChatFriend) return;
     setSendingMessage(true);
     const { error } = await supabase.from("messages").insert({ sender_id: user.id, receiver_id: activeChatFriend.user_id, content: newMessage.trim() });
@@ -201,14 +212,7 @@ const Community = () => {
     fetchAll();
   };
 
-  const deleteGroup = async (groupId: string) => {
-    if (!user) return;
-    await supabase.from("group_members").delete().eq("group_id", groupId);
-    await supabase.from("groups").delete().eq("id", groupId);
-    toast({ title: "গ্রুপ মুছে ফেলা হয়েছে" });
-    fetchGroups();
-  };
-
+  // Group functions
   const createGroup = async () => {
     if (!groupName.trim() || !user) return;
     const { data, error } = await supabase.from("groups").insert({ name: groupName, description: groupDesc || null, created_by: user.id }).select().single();
@@ -219,15 +223,21 @@ const Community = () => {
     fetchGroups();
   };
 
+  const deleteGroup = async (groupId: string) => {
+    if (!user) return;
+    await supabase.from("group_members").delete().eq("group_id", groupId);
+    await supabase.from("groups").delete().eq("id", groupId);
+    toast({ title: "গ্রুপ মুছে ফেলা হয়েছে" });
+    fetchGroups();
+  };
+
   const inviteFriendToGroup = async (groupId: string, friendId: string) => {
     if (!user) return;
-    // Check if already a member
     const { data: existing } = await supabase.from("group_members").select("id").eq("group_id", groupId).eq("user_id", friendId);
     if (existing && existing.length > 0) { toast({ title: "ইতোমধ্যে সদস্য!" }); return; }
-    // Add directly as member
-    await supabase.from("group_members").insert({ group_id: groupId, user_id: friendId, role: "member" });
+    const { error } = await supabase.from("group_members").insert({ group_id: groupId, user_id: friendId, role: "member" });
+    if (error) { toast({ title: "সদস্য যোগ ব্যর্থ", description: error.message, variant: "destructive" }); return; }
     toast({ title: "বন্ধু গ্রুপে যুক্ত হয়েছে! ✅" });
-    setShowInviteModal(null);
     fetchGroupMembers(groupId);
   };
 
@@ -240,16 +250,36 @@ const Community = () => {
     }
   };
 
-  // 1v1 Challenge functions
+  const openGroup = async (group: Group) => {
+    setActiveGroup(group);
+    setActiveChatFriend(null);
+    setChallengeMode("idle");
+    await fetchGroupMembers(group.id);
+    const { data } = await supabase.from("group_messages").select("*").eq("group_id", group.id).order("created_at", { ascending: true }).limit(200);
+    setGroupMessages((data || []) as GroupMessage[]);
+  };
+
+  const sendGroupMessageFn = async () => {
+    if (!newGroupMessage.trim() || !user || !activeGroup) return;
+    setSendingGroupMessage(true);
+    const { error } = await supabase.from("group_messages").insert({ group_id: activeGroup.id, sender_id: user.id, content: newGroupMessage.trim() });
+    if (!error) setNewGroupMessage("");
+    setSendingGroupMessage(false);
+  };
+
+  // Challenge functions
   const sendChallenge = async () => {
-    if (!user || !activeChatFriend || !challengeSubject.trim()) return;
+    if (!user || !challengeTargetFriend || !challengeSubject.trim()) return;
     setSendingChallenge(true);
     try {
-      // Generate questions first
+      const body: any = { subject: challengeSubject, questionCount: challengeCount, classLevel: challengeTargetFriend.student_class?.toString() || "10" };
+      if (challengeTopic) body.topic = challengeTopic;
+      if (challengeCustomContent.trim()) body.customContent = challengeCustomContent.trim();
+
       const resp = await fetch(GENERATE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({ subject: challengeSubject, topic: challengeTopic || undefined, questionCount: challengeCount, classLevel: activeChatFriend.student_class?.toString() || "10" }),
+        body: JSON.stringify(body),
       });
       if (!resp.ok) throw new Error("Failed");
       const data = await resp.json();
@@ -257,7 +287,7 @@ const Community = () => {
 
       const { error } = await supabase.from("challenges").insert({
         challenger_id: user.id,
-        challenged_id: activeChatFriend.user_id,
+        challenged_id: challengeTargetFriend.user_id,
         subject: challengeSubject,
         topic: challengeTopic || null,
         question_count: challengeCount,
@@ -268,7 +298,7 @@ const Community = () => {
 
       toast({ title: "চ্যালেঞ্জ পাঠানো হয়েছে! ⚔️" });
       setShowChallengeModal(false);
-      setChallengeSubject(""); setChallengeTopic("");
+      setChallengeSubject(""); setChallengeTopic(""); setChallengeCustomContent("");
       fetchChallenges();
     } catch (e) {
       toast({ title: "চ্যালেঞ্জ পাঠানো ব্যর্থ", variant: "destructive" });
@@ -276,15 +306,12 @@ const Community = () => {
     setSendingChallenge(false);
   };
 
-  const acceptChallenge = async (challenge: Challenge) => {
-    if (!user) return;
+  const takeChallenge = (challenge: Challenge) => {
     setActiveChallenge(challenge);
     setChallengeQuestions(challenge.questions as any[]);
     setChallengeAnswers(new Array((challenge.questions as any[]).length).fill(null));
     setChallengeCurrentQ(0);
     setChallengeMode("taking");
-    // Mark as active
-    await supabase.from("challenges").update({ status: "active" }).eq("id", challenge.id);
   };
 
   const submitChallengeAnswer = (qIndex: number, optIndex: number) => {
@@ -298,17 +325,48 @@ const Community = () => {
     const score = challengeAnswers.filter((a, i) => a === challengeQuestions[i]?.correctIndex).length;
     const isChallenger = activeChallenge.challenger_id === user.id;
 
+    const otherScoreField = isChallenger ? "challenged_score" : "challenger_score";
+    const otherScore = isChallenger ? activeChallenge.challenged_score : activeChallenge.challenger_score;
+    const bothDone = otherScore !== null;
+
     await supabase.from("challenges").update({
-      ...(isChallenger ? { challenger_answers: challengeAnswers, challenger_score: score } : { challenged_answers: challengeAnswers, challenged_score: score }),
-      status: isChallenger
-        ? (activeChallenge.challenged_score !== null ? "completed" : "active")
-        : (activeChallenge.challenger_score !== null ? "completed" : "active"),
-      completed_at: (isChallenger ? activeChallenge.challenged_score !== null : activeChallenge.challenger_score !== null) ? new Date().toISOString() : null,
+      ...(isChallenger
+        ? { challenger_answers: challengeAnswers, challenger_score: score }
+        : { challenged_answers: challengeAnswers, challenged_score: score }),
+      status: bothDone ? "completed" : "active",
+      completed_at: bothDone ? new Date().toISOString() : null,
     }).eq("id", activeChallenge.id);
+
+    // Update local state for result view
+    setActiveChallenge(prev => prev ? {
+      ...prev,
+      ...(isChallenger
+        ? { challenger_answers: challengeAnswers, challenger_score: score }
+        : { challenged_answers: challengeAnswers, challenged_score: score }),
+    } : null);
 
     setChallengeMode("result");
     toast({ title: `তুমি ${score}/${challengeQuestions.length} পেয়েছো! 🎯` });
     fetchChallenges();
+  };
+
+  const viewChallengeResult = (challenge: Challenge) => {
+    setActiveChallenge(challenge);
+    setChallengeQuestions(challenge.questions as any[]);
+    setChallengeMode("result");
+  };
+
+  const canTakeChallenge = (c: Challenge) => {
+    if (!user) return false;
+    const isChallenger = c.challenger_id === user.id;
+    if (isChallenger) return c.challenger_score === null;
+    return c.challenged_score === null;
+  };
+
+  const hasCompletedChallenge = (c: Challenge) => {
+    if (!user) return false;
+    const isChallenger = c.challenger_id === user.id;
+    return isChallenger ? c.challenger_score !== null : c.challenged_score !== null;
   };
 
   const formatTime = (dateStr: string) => {
@@ -319,6 +377,12 @@ const Community = () => {
     if (diff < 3600000) return `${Math.floor(diff / 60000)}মি`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}ঘ`;
     return d.toLocaleDateString("bn-BD", { day: "numeric", month: "short" });
+  };
+
+  const getSenderName = (senderId: string) => {
+    if (senderId === user?.id) return "তুমি";
+    const member = activeGroup ? groupMembers[activeGroup.id]?.find(m => m.user_id === senderId) : null;
+    return member?.full_name || "Student";
   };
 
   const totalUnread = chatPreviews.reduce((sum, c) => sum + c.unreadCount, 0);
@@ -370,10 +434,10 @@ const Community = () => {
     );
   }
 
-  // Challenge result
+  // Challenge result view
   if (challengeMode === "result" && activeChallenge) {
-    const myScore = challengeAnswers.filter((a, i) => a === challengeQuestions[i]?.correctIndex).length;
     const isChallenger = activeChallenge.challenger_id === user?.id;
+    const myScore = isChallenger ? activeChallenge.challenger_score : activeChallenge.challenged_score;
     const opponentScore = isChallenger ? activeChallenge.challenged_score : activeChallenge.challenger_score;
     const opponentName = pendingChallenges.find(c => c.id === activeChallenge.id)?.profile?.full_name || "প্রতিপক্ষ";
 
@@ -385,27 +449,151 @@ const Community = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-primary/10">
               <p className="text-sm font-medium">তুমি</p>
-              <p className="text-3xl font-bold text-primary">{myScore}</p>
-              <p className="text-xs text-muted-foreground">/{challengeQuestions.length}</p>
+              <p className="text-3xl font-bold text-primary">{myScore !== null ? myScore : "⏳"}</p>
+              <p className="text-xs text-muted-foreground">{myScore !== null ? `/${challengeQuestions.length || activeChallenge.question_count}` : "এখনো দাওনি"}</p>
             </div>
             <div className="p-4 rounded-xl bg-muted/30">
               <p className="text-sm font-medium">{opponentName}</p>
               <p className="text-3xl font-bold">{opponentScore !== null ? opponentScore : "⏳"}</p>
-              <p className="text-xs text-muted-foreground">{opponentScore !== null ? `/${challengeQuestions.length}` : "অপেক্ষমান"}</p>
+              <p className="text-xs text-muted-foreground">{opponentScore !== null ? `/${challengeQuestions.length || activeChallenge.question_count}` : "অপেক্ষমান"}</p>
             </div>
           </div>
-          {opponentScore !== null && (
+          {myScore !== null && opponentScore !== null && (
             <p className="text-lg font-bold">
               {myScore > opponentScore ? "🏆 তুমি জিতেছো!" : myScore < opponentScore ? "😔 প্রতিপক্ষ জিতেছে" : "🤝 ড্র!"}
             </p>
           )}
-          {opponentScore === null && (
-            <p className="text-sm text-muted-foreground">প্রতিপক্ষ এখনো পরীক্ষা দেয়নি। ফলাফল পরে দেখা যাবে।</p>
+          {(myScore === null || opponentScore === null) && (
+            <p className="text-sm text-muted-foreground">
+              {myScore === null ? "তুমি এখনো চ্যালেঞ্জ দাওনি।" : "প্রতিপক্ষ এখনো পরীক্ষা দেয়নি। ফলাফল পরে দেখা যাবে।"}
+            </p>
           )}
-          <Button className="rounded-xl w-full" onClick={() => { setChallengeMode("idle"); setActiveChallenge(null); }}>
-            ফিরে যাও
-          </Button>
+          <div className="flex gap-2">
+            {myScore === null && (
+              <Button variant="glow" className="flex-1 rounded-xl" onClick={() => takeChallenge(activeChallenge)}>
+                চ্যালেঞ্জ দাও ⚔️
+              </Button>
+            )}
+            <Button className="rounded-xl flex-1" variant="outline" onClick={() => { setChallengeMode("idle"); setActiveChallenge(null); }}>
+              ফিরে যাও
+            </Button>
+          </div>
         </motion.div>
+      </div>
+    );
+  }
+
+  // Group detail view
+  if (activeGroup) {
+    const members = groupMembers[activeGroup.id] || [];
+    return (
+      <div className="flex flex-col h-[calc(100vh-80px)] max-w-4xl mx-auto">
+        <div className="flex items-center gap-3 p-3 border-b border-border/50 bg-background/80 backdrop-blur-sm">
+          <Button variant="ghost" size="sm" className="rounded-full p-2" onClick={() => setActiveGroup(null)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-secondary/20 to-primary/20 flex items-center justify-center">
+            <Crown className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold">{activeGroup.name}</p>
+            <p className="text-xs text-muted-foreground">{members.length} সদস্য</p>
+          </div>
+          {activeGroup.created_by === user?.id && (
+            <Button variant="outline" size="sm" className="rounded-lg gap-1 h-8" onClick={() => { setShowInviteModal(activeGroup.id); }}>
+              <UserPlus className="w-3 h-3" /> যোগ
+            </Button>
+          )}
+        </div>
+
+        {/* Members strip */}
+        <div className="flex gap-2 p-3 overflow-x-auto border-b border-border/30">
+          {members.map(m => (
+            <div key={m.user_id} className="flex flex-col items-center gap-1 min-w-[50px]">
+              <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold">
+                {(m.full_name || "S")[0].toUpperCase()}
+              </div>
+              <span className="text-[10px] text-muted-foreground truncate max-w-[50px]">{m.full_name?.split(" ")[0] || "Student"}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Group messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {groupMessages.length === 0 && (
+            <div className="text-center text-muted-foreground text-sm py-12">
+              <MessageCircle className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              <p>গ্রুপে কথোপকথন শুরু করো! 👋</p>
+            </div>
+          )}
+          {groupMessages.map((msg) => {
+            const isMe = msg.sender_id === user?.id;
+            return (
+              <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm ${isMe ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted rounded-bl-md"}`}>
+                  {!isMe && <p className="text-[10px] font-semibold mb-0.5 opacity-70">{getSenderName(msg.sender_id)}</p>}
+                  <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                  <p className={`text-[10px] mt-1 ${isMe ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{formatTime(msg.created_at)}</p>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="p-3 border-t border-border/50 bg-background/80 backdrop-blur-sm">
+          <div className="flex gap-2">
+            <input type="text" value={newGroupMessage} onChange={(e) => setNewGroupMessage(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendGroupMessageFn()}
+              placeholder="মেসেজ লিখো..."
+              className="flex-1 bg-muted/30 rounded-full px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground" />
+            <Button className="rounded-full w-10 h-10 p-0" onClick={sendGroupMessageFn} disabled={sendingGroupMessage || !newGroupMessage.trim()}>
+              {sendingGroupMessage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Invite modal for group detail */}
+        <AnimatePresence>
+          {showInviteModal && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowInviteModal(null)}>
+              <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+                className="bg-background border border-border rounded-2xl p-6 max-w-sm w-full space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display font-bold">বন্ধু ইনভাইট করো</h3>
+                  <button onClick={() => setShowInviteModal(null)} className="p-1 rounded-lg hover:bg-muted/30"><X className="w-4 h-4" /></button>
+                </div>
+                {friends.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">আগে বন্ধু যোগ করো</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {friends.map(f => {
+                      const alreadyMember = groupMembers[showInviteModal]?.some(m => m.user_id === f.user_id);
+                      return (
+                        <div key={f.user_id} className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold">
+                              {(f.full_name || "S")[0].toUpperCase()}
+                            </div>
+                            <p className="text-sm">{f.full_name || "Student"}</p>
+                          </div>
+                          {alreadyMember ? (
+                            <span className="text-xs text-primary">✓ সদস্য</span>
+                          ) : (
+                            <Button size="sm" className="rounded-lg h-7 text-xs" onClick={() => inviteFriendToGroup(showInviteModal, f.user_id)}>
+                              যোগ করো
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -425,19 +613,24 @@ const Community = () => {
             <p className="text-sm font-semibold">{activeChatFriend.full_name || "Student"}</p>
             <p className="text-xs text-muted-foreground">লেভেল {activeChatFriend.level} · {activeChatFriend.xp} XP</p>
           </div>
-          <Button variant="outline" size="sm" className="rounded-lg gap-1" onClick={() => setShowChallengeModal(true)}>
+          <Button variant="outline" size="sm" className="rounded-lg gap-1" onClick={() => {
+            setChallengeTargetFriend(activeChatFriend);
+            setShowChallengeModal(true);
+          }}>
             <Swords className="w-4 h-4" /> চ্যালেঞ্জ
           </Button>
         </div>
 
         {/* Pending challenges banner */}
-        {pendingChallenges.filter(c => c.challenged_id === user?.id && c.status === "pending" && (c.challenger_id === activeChatFriend.user_id || c.challenged_id === activeChatFriend.user_id)).map(c => (
+        {pendingChallenges
+          .filter(c => (c.challenger_id === activeChatFriend.user_id || c.challenged_id === activeChatFriend.user_id) && c.status !== "completed" && canTakeChallenge(c))
+          .map(c => (
           <div key={c.id} className="mx-3 mt-2 p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold">⚔️ চ্যালেঞ্জ আসছে!</p>
+              <p className="text-sm font-semibold">⚔️ চ্যালেঞ্জ!</p>
               <p className="text-xs text-muted-foreground">{c.subject} · {c.question_count}টি প্রশ্ন</p>
             </div>
-            <Button size="sm" className="rounded-lg" onClick={() => acceptChallenge(c)}>Accept</Button>
+            <Button size="sm" className="rounded-lg" onClick={() => takeChallenge(c)}>চ্যালেঞ্জ দাও</Button>
           </div>
         ))}
 
@@ -465,52 +658,31 @@ const Community = () => {
         <div className="p-3 border-t border-border/50 bg-background/80 backdrop-blur-sm">
           <div className="flex gap-2">
             <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessageFn()}
               placeholder="মেসেজ লিখো..."
               className="flex-1 bg-muted/30 rounded-full px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground" />
-            <Button className="rounded-full w-10 h-10 p-0" onClick={sendMessage} disabled={sendingMessage || !newMessage.trim()}>
+            <Button className="rounded-full w-10 h-10 p-0" onClick={sendMessageFn} disabled={sendingMessage || !newMessage.trim()}>
               {sendingMessage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
           </div>
         </div>
 
         {/* Challenge Modal */}
-        <AnimatePresence>
-          {showChallengeModal && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowChallengeModal(false)}>
-              <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-                className="bg-background border border-border rounded-2xl p-6 max-w-sm w-full space-y-4" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display font-bold">⚔️ 1v1 চ্যালেঞ্জ</h3>
-                  <button onClick={() => setShowChallengeModal(false)} className="p-1 rounded-lg hover:bg-muted/30"><X className="w-4 h-4" /></button>
-                </div>
-                <p className="text-xs text-muted-foreground">{activeChatFriend.full_name} কে MCQ চ্যালেঞ্জ পাঠাও</p>
-                <div className="space-y-3">
-                  <input type="text" value={challengeSubject} onChange={e => setChallengeSubject(e.target.value)} placeholder="বিষয় (যেমন: গণিত) *"
-                    className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 placeholder:text-muted-foreground" />
-                  <input type="text" value={challengeTopic} onChange={e => setChallengeTopic(e.target.value)} placeholder="অধ্যায় (ঐচ্ছিক)"
-                    className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 placeholder:text-muted-foreground" />
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1.5">প্রশ্ন সংখ্যা</p>
-                    <div className="flex gap-2">
-                      {[5, 10, 15].map(c => (
-                        <button key={c} onClick={() => setChallengeCount(c)}
-                          className={`flex-1 py-2 rounded-xl text-sm font-bold ${challengeCount === c ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"}`}>
-                          {c}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <Button variant="glow" className="w-full rounded-xl gap-2" onClick={sendChallenge} disabled={!challengeSubject.trim() || sendingChallenge}>
-                  {sendingChallenge ? <Loader2 className="w-4 h-4 animate-spin" /> : <Swords className="w-4 h-4" />}
-                  চ্যালেঞ্জ পাঠাও
-                </Button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <ChallengeModal
+          show={showChallengeModal}
+          onClose={() => setShowChallengeModal(false)}
+          targetName={activeChatFriend.full_name || "Student"}
+          subject={challengeSubject}
+          setSubject={setChallengeSubject}
+          topic={challengeTopic}
+          setTopic={setChallengeTopic}
+          count={challengeCount}
+          setCount={setChallengeCount}
+          customContent={challengeCustomContent}
+          setCustomContent={setChallengeCustomContent}
+          sending={sendingChallenge}
+          onSend={sendChallenge}
+        />
       </div>
     );
   }
@@ -518,7 +690,7 @@ const Community = () => {
   // Main View
   const navItems = [
     { id: "chats" as MainView, label: "চ্যাট", icon: MessageCircle, badge: totalUnread },
-    { id: "requests" as MainView, label: "চ্যালেঞ্জ", icon: Swords, badge: pendingChallenges.filter(c => c.challenged_id === user?.id && c.status === "pending").length },
+    { id: "requests" as MainView, label: "চ্যালেঞ্জ", icon: Swords, badge: pendingChallenges.filter(c => canTakeChallenge(c)).length },
     { id: "groups" as MainView, label: "গ্রুপ", icon: Crown, badge: groups.length },
     { id: "search" as MainView, label: "খুঁজো", icon: Search },
   ];
@@ -579,14 +751,14 @@ const Community = () => {
         </div>
       )}
 
-      {/* Requests View */}
+      {/* Challenges View */}
       {view === "requests" && (
         <div className="space-y-4">
-          {/* Incoming Challenges */}
-          {pendingChallenges.filter(c => c.challenged_id === user?.id && c.status === "pending").length > 0 && (
+          {/* Challenges I can take */}
+          {pendingChallenges.filter(c => canTakeChallenge(c)).length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold flex items-center gap-2"><Swords className="w-4 h-4 text-primary" /> চ্যালেঞ্জ আসছে!</h3>
-              {pendingChallenges.filter(c => c.challenged_id === user?.id && c.status === "pending").map(c => (
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Swords className="w-4 h-4 text-primary" /> চ্যালেঞ্জ দাও!</h3>
+              {pendingChallenges.filter(c => canTakeChallenge(c)).map(c => (
                 <div key={c.id} className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center"><Swords className="w-5 h-5 text-primary" /></div>
@@ -595,13 +767,39 @@ const Community = () => {
                       <p className="text-xs text-muted-foreground">{c.subject} · {c.question_count}টি প্রশ্ন</p>
                     </div>
                   </div>
-                  <Button size="sm" className="rounded-lg gap-1 h-8" onClick={() => acceptChallenge(c)}><Swords className="w-3 h-3" /> Accept</Button>
+                  <Button size="sm" className="rounded-lg gap-1 h-8" onClick={() => takeChallenge(c)}><Swords className="w-3 h-3" /> দাও</Button>
                 </div>
               ))}
             </div>
           )}
 
-          {pendingChallenges.filter(c => c.challenged_id === user?.id && c.status === "pending").length === 0 && (
+          {/* Completed/waiting challenges */}
+          {pendingChallenges.filter(c => hasCompletedChallenge(c)).length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Trophy className="w-4 h-4 text-primary" /> দেওয়া চ্যালেঞ্জ</h3>
+              {pendingChallenges.filter(c => hasCompletedChallenge(c)).map(c => {
+                const isChallenger = c.challenger_id === user?.id;
+                const myScore = isChallenger ? c.challenger_score : c.challenged_score;
+                const opScore = isChallenger ? c.challenged_score : c.challenger_score;
+                return (
+                  <div key={c.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/30">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center"><Trophy className="w-5 h-5 text-muted-foreground" /></div>
+                      <div>
+                        <p className="text-sm font-semibold">{c.profile?.full_name || "Unknown"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          তুমি: {myScore}/{c.question_count} · {opScore !== null ? `প্রতিপক্ষ: ${opScore}/${c.question_count}` : "⏳ অপেক্ষমান"}
+                        </p>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="outline" className="rounded-lg h-8 text-xs" onClick={() => viewChallengeResult(c)}>ফলাফল</Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {pendingChallenges.length === 0 && (
             <div className="text-center py-12">
               <Swords className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">কোনো চ্যালেঞ্জ নেই</p>
@@ -634,7 +832,7 @@ const Community = () => {
           ) : (
             <div className="space-y-2">
               {groups.map(g => (
-                <div key={g.id} className="glass-card rounded-xl p-3 space-y-2">
+                <button key={g.id} onClick={() => openGroup(g)} className="w-full text-left glass-card rounded-xl p-3 hover:bg-muted/40 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-secondary/20 to-primary/20 flex items-center justify-center">
                       <Crown className="w-5 h-5 text-primary" />
@@ -644,11 +842,11 @@ const Community = () => {
                       {g.description && <p className="text-xs text-muted-foreground">{g.description}</p>}
                       {g.created_by === user?.id && <span className="text-[10px] text-primary font-medium">অ্যাডমিন</span>}
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                       {g.created_by === user?.id && (
                         <>
                           <Button size="sm" variant="outline" className="rounded-lg h-8 gap-1" onClick={() => { setShowInviteModal(g.id); fetchGroupMembers(g.id); }}>
-                            <UserPlus className="w-3 h-3" /> ইনভাইট
+                            <UserPlus className="w-3 h-3" />
                           </Button>
                           <Button size="sm" variant="ghost" className="rounded-lg text-destructive h-8" onClick={() => deleteGroup(g.id)}>
                             <Trash2 className="w-3.5 h-3.5" />
@@ -657,22 +855,14 @@ const Community = () => {
                       )}
                     </div>
                   </div>
-                  {/* Group members */}
-                  {groupMembers[g.id] && (
-                    <div className="flex flex-wrap gap-1 ml-14">
-                      {groupMembers[g.id].map(m => (
-                        <span key={m.user_id} className="text-[10px] bg-muted/30 px-2 py-0.5 rounded-full">{m.full_name || "Student"}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                </button>
               ))}
             </div>
           )}
 
           {/* Invite Modal */}
           <AnimatePresence>
-            {showInviteModal && (
+            {showInviteModal && !activeGroup && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowInviteModal(null)}>
                 <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
@@ -754,5 +944,72 @@ const Community = () => {
     </div>
   );
 };
+
+// Challenge Modal Component
+const ChallengeModal = ({ show, onClose, targetName, subject, setSubject, topic, setTopic, count, setCount, customContent, setCustomContent, sending, onSend }: {
+  show: boolean; onClose: () => void; targetName: string;
+  subject: string; setSubject: (v: string) => void;
+  topic: string; setTopic: (v: string) => void;
+  count: number; setCount: (v: number) => void;
+  customContent: string; setCustomContent: (v: string) => void;
+  sending: boolean; onSend: () => void;
+}) => (
+  <AnimatePresence>
+    {show && (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+          className="bg-background border border-border rounded-2xl p-6 max-w-sm w-full space-y-4 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between">
+            <h3 className="font-display font-bold">⚔️ 1v1 চ্যালেঞ্জ</h3>
+            <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted/30"><X className="w-4 h-4" /></button>
+          </div>
+          <p className="text-xs text-muted-foreground">{targetName} কে MCQ চ্যালেঞ্জ পাঠাও</p>
+          <div className="space-y-3">
+            <input type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder="বিষয় (যেমন: গণিত) *"
+              className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 placeholder:text-muted-foreground" />
+            <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="অধ্যায় (ঐচ্ছিক)"
+              className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 placeholder:text-muted-foreground" />
+            
+            {/* Custom content source */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                <FileText className="w-3 h-3" /> সোর্স ম্যাটেরিয়াল (ঐচ্ছিক)
+              </p>
+              <textarea
+                value={customContent}
+                onChange={e => setCustomContent(e.target.value)}
+                placeholder="PDF/ওয়েবসাইট/YouTube URL পেস্ট করো অথবা টেক্সট লিখো..."
+                rows={3}
+                className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 placeholder:text-muted-foreground resize-none"
+              />
+              <div className="flex gap-2 mt-1.5">
+                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Link className="w-2.5 h-2.5" /> URL</span>
+                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><FileText className="w-2.5 h-2.5" /> PDF</span>
+                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Image className="w-2.5 h-2.5" /> ছবি</span>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">প্রশ্ন সংখ্যা</p>
+              <div className="flex gap-2">
+                {[5, 10, 15].map(c => (
+                  <button key={c} onClick={() => setCount(c)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-bold ${count === c ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"}`}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <Button variant="glow" className="w-full rounded-xl gap-2" onClick={onSend} disabled={!subject.trim() || sending}>
+            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Swords className="w-4 h-4" />}
+            চ্যালেঞ্জ পাঠাও
+          </Button>
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
 
 export default Community;
