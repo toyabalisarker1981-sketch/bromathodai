@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Medal, Star, Flame, Crown, TrendingUp, Target, X, Mail, UserPlus, ClipboardList } from "lucide-react";
+import { Trophy, Medal, Star, Flame, Crown, TrendingUp, Target, X, Mail, UserPlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -30,14 +30,19 @@ const getRankIcon = (rank: number) => {
   return <span className="w-6 h-6 flex items-center justify-center text-sm font-bold text-muted-foreground">{rank}</span>;
 };
 
+const CLASS_OPTIONS = [
+  { value: "all", label: "সবাই" },
+  ...Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `ক্লাস ${i + 1}` })),
+];
+
 const Leaderboard = () => {
   const { user } = useAuth();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myProfile, setMyProfile] = useState<LeaderboardEntry | null>(null);
-  const [myClass, setMyClass] = useState<number | null>(null);
-  const [filterClass, setFilterClass] = useState<"all" | "myclass">("myclass");
+  const [myClass, setMyClass] = useState<string>("all");
+  const [filterClass, setFilterClass] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<LeaderboardEntry | null>(null);
   const [examCount, setExamCount] = useState(0);
 
@@ -45,13 +50,17 @@ const Leaderboard = () => {
     if (!user) return;
     supabase.from("profiles").select("student_class").eq("user_id", user.id).single()
       .then(({ data }) => {
-        if (data?.student_class) setMyClass(data.student_class);
+        if (data?.student_class) {
+          const cls = String(data.student_class);
+          setMyClass(cls);
+          setFilterClass(cls);
+        }
       });
   }, [user]);
 
   useEffect(() => {
     fetchLeaderboard();
-  }, [user, myClass, filterClass]);
+  }, [user, filterClass]);
 
   const fetchLeaderboard = async () => {
     setLoading(true);
@@ -59,10 +68,10 @@ const Leaderboard = () => {
       .from("profiles")
       .select("user_id, full_name, xp, level, streak_days, student_class, email")
       .order("xp", { ascending: false })
-      .limit(50);
+      .limit(100);
 
-    if (filterClass === "myclass" && myClass) {
-      query = query.eq("student_class", myClass);
+    if (filterClass !== "all") {
+      query = query.eq("student_class", parseInt(filterClass));
     }
 
     const { data } = await query;
@@ -73,6 +82,9 @@ const Leaderboard = () => {
         if (rank !== -1) {
           setMyRank(rank + 1);
           setMyProfile(data[rank] as LeaderboardEntry);
+        } else {
+          setMyRank(null);
+          setMyProfile(null);
         }
       }
     }
@@ -81,13 +93,14 @@ const Leaderboard = () => {
 
   const openProfile = async (entry: LeaderboardEntry) => {
     setSelectedUser(entry);
-    // Fetch exam count
     const { count } = await supabase.from("exam_results").select("*", { count: "exact", head: true }).eq("user_id", entry.user_id);
     setExamCount(count || 0);
   };
 
   const sendFriendRequest = async (toUserId: string) => {
     if (!user) return;
+    const { data: existing } = await supabase.from("friends").select("id").or(`and(user_id.eq.${user.id},friend_id.eq.${toUserId}),and(user_id.eq.${toUserId},friend_id.eq.${user.id})`);
+    if (existing && existing.length > 0) { toast({ title: "ইতোমধ্যে বন্ধু!" }); return; }
     const { error } = await supabase.from("friend_requests").insert({ from_user_id: user.id, to_user_id: toUserId });
     if (error) {
       toast({ title: "রিকোয়েস্ট পাঠানো ব্যর্থ", variant: "destructive" });
@@ -103,16 +116,18 @@ const Leaderboard = () => {
         <p className="text-sm text-muted-foreground mt-1">সেরা স্টুডেন্টদের র‍্যাংকিং 🏆</p>
       </motion.div>
 
-      {/* Class filter */}
-      <div className="flex gap-2">
-        <button onClick={() => setFilterClass("myclass")}
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${filterClass === "myclass" ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"}`}>
-          {myClass ? `ক্লাস ${myClass}` : "আমার ক্লাস"}
-        </button>
-        <button onClick={() => setFilterClass("all")}
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${filterClass === "all" ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"}`}>
-          সবাই
-        </button>
+      {/* Class filter - scrollable */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hidden">
+        {CLASS_OPTIONS.map(opt => (
+          <button key={opt.value} onClick={() => setFilterClass(opt.value)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+              filterClass === opt.value 
+                ? "bg-primary text-primary-foreground shadow-md" 
+                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+            }`}>
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       {/* My Rank */}
@@ -137,40 +152,28 @@ const Leaderboard = () => {
         </motion.div>
       )}
 
-      {/* Level System */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-2xl p-5">
-        <h3 className="text-sm font-semibold mb-3">লেভেল সিস্টেম</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { title: "Beginner 🌱", range: "লেভেল ১-৪", color: "from-emerald-500/20 to-green-500/20" },
-            { title: "Intermediate ⭐", range: "লেভেল ৫-৯", color: "from-blue-500/20 to-indigo-500/20" },
-            { title: "Advanced 🔥", range: "লেভেল ১০-১৯", color: "from-orange-500/20 to-red-500/20" },
-            { title: "Top Performer 🏆", range: "লেভেল ২০+", color: "from-yellow-500/20 to-amber-500/20" },
-          ].map((l, i) => (
-            <div key={i} className={`p-3 rounded-xl bg-gradient-to-br ${l.color} text-center`}>
-              <p className="text-xs font-bold">{l.title}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">{l.range}</p>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
       {/* Leaderboard List */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-2">
-        <h3 className="text-sm font-semibold">Top Students</h3>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-2">
+        <h3 className="text-sm font-semibold">
+          {filterClass === "all" ? "সকল স্টুডেন্ট" : `ক্লাস ${filterClass} এর স্টুডেন্ট`}
+          <span className="text-muted-foreground font-normal ml-1">({entries.length} জন)</span>
+        </h3>
         {loading ? (
           <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
         ) : entries.length === 0 ? (
           <div className="glass-card rounded-2xl p-8 text-center">
             <Trophy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">এখনো কোনো ডাটা নেই</p>
+            <p className="text-sm text-muted-foreground">
+              {filterClass === "all" ? "এখনো কোনো স্টুডেন্ট নেই" : `ক্লাস ${filterClass} তে এখনো কোনো স্টুডেন্ট নেই`}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">অন্য ক্লাস দেখতে উপরের ফিল্টার ব্যবহার করো</p>
           </div>
         ) : (
           entries.map((entry, i) => {
             const rank = i + 1;
             const isMe = entry.user_id === user?.id;
             return (
-              <motion.div key={entry.user_id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
+              <motion.div key={entry.user_id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}
                 onClick={() => openProfile(entry)}
                 className={`glass-card rounded-xl p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors ${isMe ? "border-primary/30 bg-primary/5" : ""} ${rank <= 3 ? "border-yellow-500/20" : ""}`}>
                 <div className="flex-shrink-0">{getRankIcon(rank)}</div>
@@ -243,11 +246,9 @@ const Leaderboard = () => {
               )}
 
               {selectedUser.user_id !== user?.id && (
-                <div className="flex gap-2">
-                  <Button className="flex-1 rounded-xl gap-1" onClick={() => sendFriendRequest(selectedUser.user_id)}>
-                    <UserPlus className="w-4 h-4" /> বন্ধু যোগ করো
-                  </Button>
-                </div>
+                <Button className="w-full rounded-xl gap-1" onClick={() => sendFriendRequest(selectedUser.user_id)}>
+                  <UserPlus className="w-4 h-4" /> বন্ধু যোগ করো
+                </Button>
               )}
             </motion.div>
           </motion.div>
