@@ -2,6 +2,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { LayoutDashboard, MessageSquare, BookOpen, Brain, Settings, LogOut, Library, Calculator, ClipboardList, Users, Play, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "ড্যাশবোর্ড" },
