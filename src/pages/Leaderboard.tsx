@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Medal, Star, Flame, Crown, TrendingUp, Target, X, Mail, UserPlus } from "lucide-react";
+import { Trophy, Medal, Star, Flame, Crown, TrendingUp, X, Mail, UserPlus, Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,20 +17,18 @@ interface LeaderboardEntry {
 }
 
 const getLevelTitle = (level: number) => {
-  if (level >= 20) return { title: "Top Performer 🏆", color: "text-yellow-400" };
-  if (level >= 10) return { title: "Advanced 🔥", color: "text-orange-400" };
-  if (level >= 5) return { title: "Intermediate ⭐", color: "text-blue-400" };
-  return { title: "Beginner 🌱", color: "text-emerald-400" };
+  if (level >= 20) return { title: "Top Performer 🏆", color: "text-primary" };
+  if (level >= 10) return { title: "Advanced 🔥", color: "text-secondary" };
+  if (level >= 5) return { title: "Intermediate ⭐", color: "text-accent-foreground" };
+  return { title: "Beginner 🌱", color: "text-muted-foreground" };
 };
 
 const getRankIcon = (rank: number) => {
-  if (rank === 1) return <Crown className="w-6 h-6 text-yellow-400" />;
-  if (rank === 2) return <Medal className="w-6 h-6 text-gray-300" />;
-  if (rank === 3) return <Medal className="w-6 h-6 text-amber-600" />;
+  if (rank === 1) return <Crown className="w-6 h-6 text-primary" />;
+  if (rank === 2) return <Medal className="w-6 h-6 text-muted-foreground" />;
+  if (rank === 3) return <Medal className="w-6 h-6 text-secondary" />;
   return <span className="w-6 h-6 flex items-center justify-center text-sm font-bold text-muted-foreground">{rank}</span>;
 };
-
-// No class options - user only sees their own class
 
 const Leaderboard = () => {
   const { user } = useAuth();
@@ -46,25 +44,26 @@ const Leaderboard = () => {
     if (!user) return;
     supabase.from("profiles").select("student_class").eq("user_id", user.id).single()
       .then(({ data }) => {
-        if (data?.student_class) {
-          setMyClass(data.student_class);
-        }
+        setMyClass(data?.student_class ?? null);
+        // Fetch even if null
+        fetchLeaderboard(data?.student_class ?? null);
       });
   }, [user]);
 
-  useEffect(() => {
-    if (myClass) fetchLeaderboard();
-  }, [user, myClass]);
-
-  const fetchLeaderboard = async () => {
-    if (!myClass) return;
+  const fetchLeaderboard = async (studentClass: number | null) => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .from("profiles")
       .select("user_id, full_name, xp, level, streak_days, student_class, email")
-      .eq("student_class", myClass)
       .order("xp", { ascending: false })
       .limit(100);
+
+    // If user has a class, filter by that class OR null class
+    if (studentClass) {
+      query = query.or(`student_class.eq.${studentClass},student_class.is.null`);
+    }
+
+    const { data } = await query;
     if (data) {
       setEntries(data as LeaderboardEntry[]);
       if (user) {
@@ -102,25 +101,32 @@ const Leaderboard = () => {
   return (
     <div className="p-4 lg:p-8 max-w-3xl mx-auto space-y-6">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-display font-bold flex items-center gap-2"><Trophy className="w-6 h-6 text-primary" /> লিডারবোর্ড</h1>
+        <h1 className="text-2xl font-display font-bold flex items-center gap-2">
+          <Trophy className="w-6 h-6 text-primary" /> লিডারবোর্ড
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">সেরা স্টুডেন্টদের র‍্যাংকিং 🏆</p>
       </motion.div>
 
       {/* Class badge */}
       {myClass && (
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground shadow-md">
-            ক্লাস {myClass}
-          </span>
-          <span className="text-xs text-muted-foreground">তোমার ক্লাসের র‍্যাংকিং</span>
-        </div>
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+          className="liquid-glass rounded-2xl px-4 py-3 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <span className="text-sm font-semibold">ক্লাস {myClass}</span>
+            <p className="text-[10px] text-muted-foreground">তোমার ক্লাসের র‍্যাংকিং</p>
+          </div>
+        </motion.div>
       )}
 
       {/* My Rank */}
       {myProfile && myRank && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-5">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          className="liquid-glass-glow rounded-2xl p-5">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-2xl font-bold text-primary">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-2xl font-bold text-primary backdrop-blur-sm">
               #{myRank}
             </div>
             <div className="flex-1">
@@ -128,7 +134,7 @@ const Leaderboard = () => {
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                 <span className="flex items-center gap-1"><Star className="w-3 h-3 text-primary" /> {myProfile.xp} XP</span>
                 <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" /> লেভেল {myProfile.level}</span>
-                <span className="flex items-center gap-1"><Flame className="w-3 h-3 text-orange-400" /> {myProfile.streak_days} দিন</span>
+                <span className="flex items-center gap-1"><Flame className="w-3 h-3 text-destructive" /> {myProfile.streak_days} দিন</span>
               </div>
               <p className={`text-xs mt-1 font-medium ${getLevelTitle(myProfile.level).color}`}>
                 {getLevelTitle(myProfile.level).title}
@@ -141,15 +147,17 @@ const Leaderboard = () => {
       {/* Leaderboard List */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-2">
         <h3 className="text-sm font-semibold">
-          ক্লাস {myClass} এর স্টুডেন্ট
+          {myClass ? `ক্লাস ${myClass} এর স্টুডেন্ট` : "সকল স্টুডেন্ট"}
           <span className="text-muted-foreground font-normal ml-1">({entries.length} জন)</span>
         </h3>
         {loading ? (
-          <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+          <div className="flex justify-center py-8">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
         ) : entries.length === 0 ? (
-          <div className="glass-card rounded-2xl p-8 text-center">
+          <div className="liquid-glass rounded-2xl p-8 text-center">
             <Trophy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">ক্লাস {myClass} তে এখনো কোনো স্টুডেন্ট নেই</p>
+            <p className="text-sm text-muted-foreground">এখনো কোনো স্টুডেন্ট নেই</p>
             <p className="text-xs text-muted-foreground mt-1">কুইজ বা পরীক্ষা দিয়ে XP অর্জন করো!</p>
           </div>
         ) : (
@@ -159,13 +167,15 @@ const Leaderboard = () => {
             return (
               <motion.div key={entry.user_id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}
                 onClick={() => openProfile(entry)}
-                className={`glass-card rounded-xl p-4 flex items-center gap-3 cursor-pointer hover:border-primary/30 transition-colors ${isMe ? "border-primary/30 bg-primary/5" : ""} ${rank <= 3 ? "border-yellow-500/20" : ""}`}>
+                className={`liquid-glass rounded-2xl p-4 flex items-center gap-3 cursor-pointer transition-all duration-300 hover:shadow-[0_0_20px_-5px_hsl(var(--primary)/0.3)] hover:border-primary/20 ${isMe ? "border-primary/30 bg-primary/5 shadow-[0_0_15px_-5px_hsl(var(--primary)/0.2)]" : ""} ${rank <= 3 ? "border-primary/10" : ""}`}>
                 <div className="flex-shrink-0">{getRankIcon(rank)}</div>
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/15 to-secondary/15 flex items-center justify-center text-xs font-bold">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/15 to-secondary/15 backdrop-blur-sm flex items-center justify-center text-xs font-bold">
                   {(entry.full_name || "S")[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{entry.full_name || "Student"} {isMe && <span className="text-xs text-primary">(তুমি)</span>}</p>
+                  <p className="text-sm font-semibold truncate">
+                    {entry.full_name || "Student"} {isMe && <span className="text-xs text-primary">(তুমি)</span>}
+                  </p>
                   <p className={`text-[10px] font-medium ${getLevelTitle(entry.level).color}`}>{getLevelTitle(entry.level).title}</p>
                 </div>
                 <div className="text-right">
@@ -182,18 +192,18 @@ const Leaderboard = () => {
       <AnimatePresence>
         {selectedUser && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-background/60 backdrop-blur-xl z-50 flex items-center justify-center p-4"
             onClick={() => setSelectedUser(null)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-background border border-border rounded-2xl p-6 max-w-sm w-full space-y-4"
+              className="liquid-glass-glow rounded-3xl p-6 max-w-sm w-full space-y-4"
               onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <h3 className="font-display font-bold">প্রোফাইল</h3>
-                <button onClick={() => setSelectedUser(null)} className="p-1 rounded-lg hover:bg-muted/30"><X className="w-4 h-4" /></button>
+                <button onClick={() => setSelectedUser(null)} className="p-1.5 rounded-xl hover:bg-muted/30 transition-colors"><X className="w-4 h-4" /></button>
               </div>
               
               <div className="text-center space-y-3">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-2xl font-bold mx-auto">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm flex items-center justify-center text-2xl font-bold mx-auto ring-2 ring-primary/10">
                   {(selectedUser.full_name || "S")[0].toUpperCase()}
                 </div>
                 <div>
@@ -205,22 +215,22 @@ const Leaderboard = () => {
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <div className="p-3 rounded-xl bg-primary/10 text-center">
+                <div className="p-3 rounded-xl bg-primary/10 backdrop-blur-sm text-center">
                   <p className="text-lg font-bold text-primary">{selectedUser.xp}</p>
                   <p className="text-[10px] text-muted-foreground">XP</p>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/30 text-center">
+                <div className="p-3 rounded-xl bg-muted/20 backdrop-blur-sm text-center">
                   <p className="text-lg font-bold">{examCount}</p>
                   <p className="text-[10px] text-muted-foreground">পরীক্ষা</p>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/30 text-center">
+                <div className="p-3 rounded-xl bg-muted/20 backdrop-blur-sm text-center">
                   <p className="text-lg font-bold">{selectedUser.streak_days}</p>
                   <p className="text-[10px] text-muted-foreground">স্ট্রিক</p>
                 </div>
               </div>
 
               {selectedUser.email && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 rounded-xl bg-muted/20">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 rounded-xl bg-muted/10 backdrop-blur-sm">
                   <Mail className="w-4 h-4" /> {selectedUser.email}
                 </div>
               )}
