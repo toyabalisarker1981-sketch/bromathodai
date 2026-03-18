@@ -219,6 +219,8 @@ const Community = () => {
     const { error } = await supabase.from("friends").insert({ user_id: user.id, friend_id: toUserId });
     if (error) { toast({ title: "বন্ধু যোগ ব্যর্থ", variant: "destructive" }); return; }
     toast({ title: "বন্ধু যোগ হয়েছে! 🎉" });
+    const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+    notifyFriendAdded(myProfile?.full_name || "কেউ একজন", toUserId);
     setSearchResults(prev => prev.filter(r => r.user_id !== toUserId));
     fetchAll();
   };
