@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast";
 type MainView = "chats" | "requests" | "groups" | "search";
 
 interface FriendProfile { user_id: string; full_name: string | null; xp: number; level: number; email?: string | null; student_class?: number | null; }
-interface FriendRequest { id: string; from_user_id: string; to_user_id: string; status: string; created_at: string; }
+
 interface Group { id: string; name: string; description: string | null; created_by: string; created_at: string; }
 interface Message { id: string; sender_id: string; receiver_id: string; content: string; created_at: string; read: boolean; }
 interface ChatPreview { friend: FriendProfile; lastMessage?: Message; unreadCount: number; }
@@ -24,8 +24,6 @@ const Community = () => {
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
   const [friends, setFriends] = useState<FriendProfile[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<(FriendRequest & { profile?: FriendProfile })[]>([]);
-  const [sentRequests, setSentRequests] = useState<(FriendRequest & { profile?: FriendProfile })[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [groupName, setGroupName] = useState("");
@@ -92,7 +90,7 @@ const Community = () => {
 
   const fetchAll = async () => {
     setLoading(true);
-    await Promise.all([fetchFriends(), fetchRequests(), fetchGroups(), loadChatPreviews(), fetchChallenges()]);
+    await Promise.all([fetchFriends(), fetchGroups(), loadChatPreviews(), fetchChallenges()]);
     setLoading(false);
   };
 
@@ -108,21 +106,6 @@ const Community = () => {
     }
   };
 
-  const fetchRequests = async () => {
-    if (!user) return;
-    const { data: incoming } = await supabase.from("friend_requests").select("*").eq("to_user_id", user.id).eq("status", "pending");
-    if (incoming && incoming.length > 0) {
-      const fromIds = incoming.map(r => r.from_user_id);
-      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, xp, level, email").in("user_id", fromIds);
-      setPendingRequests(incoming.map(r => ({ ...r, profile: (profiles || []).find((p: any) => p.user_id === r.from_user_id) as FriendProfile | undefined })));
-    } else setPendingRequests([]);
-    const { data: sent } = await supabase.from("friend_requests").select("*").eq("from_user_id", user.id).eq("status", "pending");
-    if (sent && sent.length > 0) {
-      const toIds = sent.map(r => r.to_user_id);
-      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, xp, level, email").in("user_id", toIds);
-      setSentRequests(sent.map(r => ({ ...r, profile: (profiles || []).find((p: any) => p.user_id === r.to_user_id) as FriendProfile | undefined })));
-    } else setSentRequests([]);
-  };
 
   const fetchGroups = async () => {
     if (!user) return;
@@ -207,40 +190,15 @@ const Community = () => {
     setSearching(false);
   };
 
-  const sendFriendRequest = async (toUserId: string) => {
+  const addFriendDirectly = async (toUserId: string) => {
     if (!user) return;
     const { data: existing } = await supabase.from("friends").select("id").or(`and(user_id.eq.${user.id},friend_id.eq.${toUserId}),and(user_id.eq.${toUserId},friend_id.eq.${user.id})`);
     if (existing && existing.length > 0) { toast({ title: "ইতোমধ্যে বন্ধু!" }); return; }
-    const { data: existingReq } = await supabase.from("friend_requests").select("id").eq("from_user_id", user.id).eq("to_user_id", toUserId).eq("status", "pending");
-    if (existingReq && existingReq.length > 0) { toast({ title: "ইতোমধ্যে রিকোয়েস্ট পাঠানো হয়েছে!" }); return; }
-    const { error } = await supabase.from("friend_requests").insert({ from_user_id: user.id, to_user_id: toUserId });
-    if (!error) {
-      toast({ title: "Friend Request পাঠানো হয়েছে! ✅" });
-      setSearchResults(prev => prev.filter(r => r.user_id !== toUserId));
-      fetchRequests();
-    }
-  };
-
-  const handleAcceptRequest = async (requestId: string, fromUserId: string) => {
-    if (!user) return;
-    const { error: updateError } = await supabase.from("friend_requests").update({ status: "accepted" }).eq("id", requestId);
-    if (updateError) { toast({ title: "রিকোয়েস্ট আপডেট ব্যর্থ", variant: "destructive" }); return; }
-    // Only insert one row where user_id = current user (RLS allows this)
-    const { error: insertError } = await supabase.from("friends").insert({ user_id: user.id, friend_id: fromUserId });
-    if (insertError) { toast({ title: "বন্ধু যোগ ব্যর্থ", variant: "destructive" }); return; }
+    const { error } = await supabase.from("friends").insert({ user_id: user.id, friend_id: toUserId });
+    if (error) { toast({ title: "বন্ধু যোগ ব্যর্থ", variant: "destructive" }); return; }
     toast({ title: "বন্ধু যোগ হয়েছে! 🎉" });
+    setSearchResults(prev => prev.filter(r => r.user_id !== toUserId));
     fetchAll();
-  };
-
-  const handleRejectRequest = async (requestId: string) => {
-    await supabase.from("friend_requests").delete().eq("id", requestId);
-    toast({ title: "রিকোয়েস্ট বাতিল করা হয়েছে" });
-    fetchRequests();
-  };
-
-  const cancelSentRequest = async (requestId: string) => {
-    await supabase.from("friend_requests").delete().eq("id", requestId);
-    fetchRequests();
   };
 
   const deleteGroup = async (groupId: string) => {
@@ -560,7 +518,7 @@ const Community = () => {
   // Main View
   const navItems = [
     { id: "chats" as MainView, label: "চ্যাট", icon: MessageCircle, badge: totalUnread },
-    { id: "requests" as MainView, label: "রিকোয়েস্ট", icon: Bell, badge: pendingRequests.length + pendingChallenges.filter(c => c.challenged_id === user?.id && c.status === "pending").length },
+    { id: "requests" as MainView, label: "চ্যালেঞ্জ", icon: Swords, badge: pendingChallenges.filter(c => c.challenged_id === user?.id && c.status === "pending").length },
     { id: "groups" as MainView, label: "গ্রুপ", icon: Crown, badge: groups.length },
     { id: "search" as MainView, label: "খুঁজো", icon: Search },
   ];
@@ -643,53 +601,12 @@ const Community = () => {
             </div>
           )}
 
-          {/* Incoming Friend Requests */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold flex items-center gap-2"><UserPlus className="w-4 h-4 text-primary" /> প্রাপ্ত রিকোয়েস্ট ({pendingRequests.length})</h3>
-            {pendingRequests.length === 0 ? (
-              <p className="text-xs text-muted-foreground bg-muted/20 rounded-xl p-4 text-center">কোনো নতুন রিকোয়েস্ট নেই</p>
-            ) : (
-              pendingRequests.map(req => (
-                <div key={req.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/30">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center text-sm font-bold">
-                      {(req.profile?.full_name || "U")[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{req.profile?.full_name || "Unknown"}</p>
-                      <p className="text-xs text-muted-foreground">{req.profile?.email || `লেভেল ${req.profile?.level || 1}`}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <Button size="sm" className="rounded-lg gap-1 h-8" onClick={() => handleAcceptRequest(req.id, req.from_user_id)}><Check className="w-3 h-3" /> Accept</Button>
-                    <Button size="sm" variant="outline" className="rounded-lg h-8" onClick={() => handleRejectRequest(req.id)}><X className="w-3 h-3" /></Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          {/* Sent Requests */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold flex items-center gap-2"><Send className="w-4 h-4 text-muted-foreground" /> পাঠানো রিকোয়েস্ট ({sentRequests.length})</h3>
-            {sentRequests.length === 0 ? (
-              <p className="text-xs text-muted-foreground bg-muted/20 rounded-xl p-4 text-center">কোনো পাঠানো রিকোয়েস্ট নেই</p>
-            ) : (
-              sentRequests.map(req => (
-                <div key={req.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/30">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center text-sm font-bold">
-                      {(req.profile?.full_name || "U")[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{req.profile?.full_name || "Unknown"}</p>
-                      <p className="text-xs text-muted-foreground">পেন্ডিং...</p>
-                    </div>
-                  </div>
-                  <Button size="sm" variant="ghost" className="rounded-lg h-8 text-destructive" onClick={() => cancelSentRequest(req.id)}><X className="w-3 h-3" /> বাতিল</Button>
-                </div>
-              ))
-            )}
-          </div>
+          {pendingChallenges.filter(c => c.challenged_id === user?.id && c.status === "pending").length === 0 && (
+            <div className="text-center py-12">
+              <Swords className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">কোনো চ্যালেঞ্জ নেই</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -825,7 +742,7 @@ const Community = () => {
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" className="rounded-lg gap-1 h-8" onClick={() => sendFriendRequest(r.user_id)}>
+                  <Button size="sm" className="rounded-lg gap-1 h-8" onClick={() => addFriendDirectly(r.user_id)}>
                     <UserPlus className="w-3 h-3" /> Add
                   </Button>
                 </div>
