@@ -42,41 +42,70 @@ const Leaderboard = () => {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("student_class").eq("user_id", user.id).single()
-      .then(({ data }) => {
-        setMyClass(data?.student_class ?? null);
-        // Fetch even if null
-        fetchLeaderboard(data?.student_class ?? null);
-      });
+
+    const loadClassAndLeaderboard = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("student_class")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        setMyClass(null);
+        setEntries([]);
+        setMyRank(null);
+        setMyProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      const metadataClass = typeof user.user_metadata?.student_class === "number"
+        ? user.user_metadata.student_class
+        : null;
+      const resolvedClass = data?.student_class ?? metadataClass;
+
+      setMyClass(resolvedClass);
+      fetchLeaderboard(resolvedClass);
+    };
+
+    loadClassAndLeaderboard();
   }, [user]);
 
   const fetchLeaderboard = async (studentClass: number | null) => {
     setLoading(true);
-    let query = supabase
+
+    if (studentClass === null) {
+      setEntries([]);
+      setMyRank(null);
+      setMyProfile(null);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
       .from("profiles")
       .select("user_id, full_name, xp, level, streak_days, student_class, email")
-      .order("xp", { ascending: false })
-      .limit(100);
+      .eq("student_class", studentClass)
+      .order("xp", { ascending: false });
 
-    // Only show users from the same class
-    if (studentClass) {
-      query = query.eq("student_class", studentClass);
+    if (error || !data) {
+      setEntries([]);
+      setMyRank(null);
+      setMyProfile(null);
+      setLoading(false);
+      return;
     }
 
-    const { data } = await query;
-    if (data) {
-      setEntries(data as LeaderboardEntry[]);
-      if (user) {
-        const rank = data.findIndex(e => e.user_id === user.id);
-        if (rank !== -1) {
-          setMyRank(rank + 1);
-          setMyProfile(data[rank] as LeaderboardEntry);
-        } else {
-          setMyRank(null);
-          setMyProfile(null);
-        }
-      }
+    setEntries(data as LeaderboardEntry[]);
+    const rank = data.findIndex((e) => e.user_id === user?.id);
+    if (rank !== -1) {
+      setMyRank(rank + 1);
+      setMyProfile(data[rank] as LeaderboardEntry);
+    } else {
+      setMyRank(null);
+      setMyProfile(null);
     }
+
     setLoading(false);
   };
 
@@ -107,8 +136,7 @@ const Leaderboard = () => {
         <p className="text-sm text-muted-foreground mt-1">সেরা স্টুডেন্টদের র‍্যাংকিং 🏆</p>
       </motion.div>
 
-      {/* Class badge */}
-      {myClass && (
+      {myClass !== null && (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
           className="liquid-glass rounded-2xl px-4 py-3 flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center">
@@ -121,7 +149,6 @@ const Leaderboard = () => {
         </motion.div>
       )}
 
-      {/* My Rank */}
       {myProfile && myRank && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           className="liquid-glass-glow rounded-2xl p-5">
@@ -144,10 +171,9 @@ const Leaderboard = () => {
         </motion.div>
       )}
 
-      {/* Leaderboard List */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-2">
         <h3 className="text-sm font-semibold">
-          {myClass ? `ক্লাস ${myClass} এর স্টুডেন্ট` : "সকল স্টুডেন্ট"}
+          {myClass !== null ? `ক্লাস ${myClass} এর স্টুডেন্ট` : "ক্লাস সেট করা হয়নি"}
           <span className="text-muted-foreground font-normal ml-1">({entries.length} জন)</span>
         </h3>
         {loading ? (
@@ -157,8 +183,12 @@ const Leaderboard = () => {
         ) : entries.length === 0 ? (
           <div className="liquid-glass rounded-2xl p-8 text-center">
             <Trophy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">এখনো কোনো স্টুডেন্ট নেই</p>
-            <p className="text-xs text-muted-foreground mt-1">কুইজ বা পরীক্ষা দিয়ে XP অর্জন করো!</p>
+            <p className="text-sm text-muted-foreground">
+              {myClass !== null ? "তোমার ক্লাসের অন্য ইউজার এখনো নেই" : "তোমার ক্লাস সেট করা নেই"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {myClass !== null ? "যারা ক্লাস সেট করবে, তারা এখানে দেখাবে" : "Settings থেকে ক্লাস সেট করলে শুধু তোমার ক্লাসের ইউজার দেখাবে"}
+            </p>
           </div>
         ) : (
           entries.map((entry, i) => {
@@ -188,7 +218,6 @@ const Leaderboard = () => {
         )}
       </motion.div>
 
-      {/* User Profile Modal */}
       <AnimatePresence>
         {selectedUser && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
