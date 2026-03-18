@@ -90,7 +90,7 @@ const Community = () => {
 
   const fetchAll = async () => {
     setLoading(true);
-    await Promise.all([fetchFriends(), fetchRequests(), fetchGroups(), loadChatPreviews(), fetchChallenges()]);
+    await Promise.all([fetchFriends(), fetchGroups(), loadChatPreviews(), fetchChallenges()]);
     setLoading(false);
   };
 
