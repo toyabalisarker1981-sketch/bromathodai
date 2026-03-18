@@ -101,18 +101,6 @@ const Leaderboard = () => {
         <p className="text-sm text-muted-foreground mt-1">সেরা স্টুডেন্টদের র‍্যাংকিং 🏆</p>
       </motion.div>
 
-      {myClass !== null && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-          className="liquid-glass rounded-2xl px-4 py-3 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary" />
-          </div>
-          <div>
-            <span className="text-sm font-semibold">ক্লাস {myClass}</span>
-            <p className="text-[10px] text-muted-foreground">তোমার ক্লাসের র‍্যাংকিং</p>
-          </div>
-        </motion.div>
-      )}
 
       {myProfile && myRank && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
