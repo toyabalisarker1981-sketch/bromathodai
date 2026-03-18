@@ -106,21 +106,6 @@ const Community = () => {
     }
   };
 
-  const fetchRequests = async () => {
-    if (!user) return;
-    const { data: incoming } = await supabase.from("friend_requests").select("*").eq("to_user_id", user.id).eq("status", "pending");
-    if (incoming && incoming.length > 0) {
-      const fromIds = incoming.map(r => r.from_user_id);
-      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, xp, level, email").in("user_id", fromIds);
-      setPendingRequests(incoming.map(r => ({ ...r, profile: (profiles || []).find((p: any) => p.user_id === r.from_user_id) as FriendProfile | undefined })));
-    } else setPendingRequests([]);
-    const { data: sent } = await supabase.from("friend_requests").select("*").eq("from_user_id", user.id).eq("status", "pending");
-    if (sent && sent.length > 0) {
-      const toIds = sent.map(r => r.to_user_id);
-      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, xp, level, email").in("user_id", toIds);
-      setSentRequests(sent.map(r => ({ ...r, profile: (profiles || []).find((p: any) => p.user_id === r.to_user_id) as FriendProfile | undefined })));
-    } else setSentRequests([]);
-  };
 
   const fetchGroups = async () => {
     if (!user) return;
