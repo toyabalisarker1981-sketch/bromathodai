@@ -15,7 +15,7 @@ import Chat from "@/pages/Chat";
 import Notebook from "@/pages/Notebook";
 import Library from "@/pages/Library";
 import Quiz from "@/pages/Quiz";
-import CreateContent from "@/pages/CreateContent";
+import Calculator from "@/pages/Calculator";
 import Exam from "@/pages/Exam";
 import Community from "@/pages/Community";
 import StudyTube from "@/pages/StudyTube";
