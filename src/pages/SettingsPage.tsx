@@ -98,6 +98,7 @@ const userGuide = [
 
 const SettingsPage = () => {
   const { user, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [studentClass, setStudentClass] = useState("");
