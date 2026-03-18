@@ -251,6 +251,9 @@ const Community = () => {
     const { error } = await supabase.from("group_members").insert({ group_id: groupId, user_id: friendId, role: "member" });
     if (error) { toast({ title: "সদস্য যোগ ব্যর্থ", description: error.message, variant: "destructive" }); return; }
     toast({ title: "বন্ধু গ্রুপে যুক্ত হয়েছে! ✅" });
+    const group = groups.find(g => g.id === groupId);
+    const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+    notifyGroupInvite(myProfile?.full_name || "কেউ একজন", friendId, group?.name || "গ্রুপ");
     fetchGroupMembers(groupId);
   };
 
