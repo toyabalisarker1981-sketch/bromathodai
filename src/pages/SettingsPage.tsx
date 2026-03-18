@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import developerPhoto from "@/assets/developer-photo.png";
 import { Settings, User, GraduationCap, Languages, Save, Check, Shield, LogOut, Mail, Edit3, HelpCircle, Info, ChevronDown, ChevronUp, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
