@@ -221,7 +221,7 @@ const Exam = () => {
         }
         toast({ title: "OMR স্ক্যান ব্যর্থ", description: "ম্যানুয়ালি উত্তর দাও", variant: "destructive" });
         setScanning(false);
-        setMode("exam");
+        setMode("scan");
       };
       reader.readAsDataURL(file);
     } catch {
