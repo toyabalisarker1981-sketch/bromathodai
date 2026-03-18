@@ -47,9 +47,7 @@ const Leaderboard = () => {
     supabase.from("profiles").select("student_class").eq("user_id", user.id).single()
       .then(({ data }) => {
         if (data?.student_class) {
-          const cls = String(data.student_class);
-          setMyClass(cls);
-          setFilterClass(cls);
+          setMyClass(data.student_class);
         }
       });
   }, [user]);
