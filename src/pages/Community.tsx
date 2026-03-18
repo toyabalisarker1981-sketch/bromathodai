@@ -742,7 +742,7 @@ const Community = () => {
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" className="rounded-lg gap-1 h-8" onClick={() => sendFriendRequest(r.user_id)}>
+                  <Button size="sm" className="rounded-lg gap-1 h-8" onClick={() => addFriendDirectly(r.user_id)}>
                     <UserPlus className="w-3 h-3" /> Add
                   </Button>
                 </div>
