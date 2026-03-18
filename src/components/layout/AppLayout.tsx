@@ -63,6 +63,10 @@ const AppLayout = () => {
       </aside>
 
       <main className="flex-1 md:ml-20 lg:ml-64 pb-20 md:pb-0">
+        {/* Top bar with notification bell */}
+        <div className="sticky top-0 z-30 flex items-center justify-end px-4 py-2 bg-background/60 backdrop-blur-sm border-b border-border/30 md:border-none">
+          <NotificationBell />
+        </div>
         <Outlet />
       </main>
 
