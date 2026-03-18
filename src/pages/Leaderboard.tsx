@@ -30,10 +30,7 @@ const getRankIcon = (rank: number) => {
   return <span className="w-6 h-6 flex items-center justify-center text-sm font-bold text-muted-foreground">{rank}</span>;
 };
 
-const CLASS_OPTIONS = [
-  { value: "all", label: "সবাই" },
-  ...Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `ক্লাস ${i + 1}` })),
-];
+// No class options - user only sees their own class
 
 const Leaderboard = () => {
   const { user } = useAuth();
