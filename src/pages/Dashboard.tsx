@@ -133,7 +133,7 @@ const Dashboard = () => {
       </motion.div>
 
       {/* Achievements */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="glass-card rounded-2xl p-5 space-y-3">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="liquid-glass rounded-2xl p-5 space-y-3">
         <h2 className="font-display font-semibold flex items-center gap-2 text-sm"><Trophy className="w-4 h-4 text-secondary" /> অ্যাচিভমেন্টস</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[

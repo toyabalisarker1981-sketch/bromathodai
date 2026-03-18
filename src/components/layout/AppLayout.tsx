@@ -66,7 +66,7 @@ const AppLayout = () => {
       </main>
 
       {/* Mobile bottom nav - show first 5 + more */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-white/[0.06] bg-background/60 backdrop-blur-2xl">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-white/[0.06] bg-background/50 backdrop-blur-3xl">
         <div className="flex items-center justify-around h-16">
           {navItems.slice(0, 5).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.to === "/"}
