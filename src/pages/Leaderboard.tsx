@@ -141,7 +141,7 @@ const Leaderboard = () => {
       {/* Leaderboard List */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-2">
         <h3 className="text-sm font-semibold">
-          {filterClass === "all" ? "সকল স্টুডেন্ট" : `ক্লাস ${filterClass} এর স্টুডেন্ট`}
+          ক্লাস {myClass} এর স্টুডেন্ট
           <span className="text-muted-foreground font-normal ml-1">({entries.length} জন)</span>
         </h3>
         {loading ? (
