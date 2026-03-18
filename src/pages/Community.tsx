@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast";
 type MainView = "chats" | "requests" | "groups" | "search";
 
 interface FriendProfile { user_id: string; full_name: string | null; xp: number; level: number; email?: string | null; student_class?: number | null; }
-interface FriendRequest { id: string; from_user_id: string; to_user_id: string; status: string; created_at: string; }
+
 interface Group { id: string; name: string; description: string | null; created_by: string; created_at: string; }
 interface Message { id: string; sender_id: string; receiver_id: string; content: string; created_at: string; read: boolean; }
 interface ChatPreview { friend: FriendProfile; lastMessage?: Message; unreadCount: number; }
