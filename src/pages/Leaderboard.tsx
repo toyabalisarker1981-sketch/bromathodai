@@ -53,8 +53,8 @@ const Leaderboard = () => {
   }, [user]);
 
   useEffect(() => {
-    fetchLeaderboard();
-  }, [user, filterClass]);
+    if (myClass) fetchLeaderboard();
+  }, [user, myClass]);
 
   const fetchLeaderboard = async () => {
     setLoading(true);
