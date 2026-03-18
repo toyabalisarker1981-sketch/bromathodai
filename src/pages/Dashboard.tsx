@@ -88,9 +88,9 @@ const Dashboard = () => {
       </motion.div>
 
       {/* Quote */}
-      <motion.div key={quoteIndex} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-5 border-l-4 border-primary">
+      <motion.div key={quoteIndex} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="liquid-glass-glow rounded-2xl p-5 border-l-4 border-primary">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center text-2xl flex-shrink-0">{currentQuote.emoji}</div>
+          <div className="w-12 h-12 rounded-xl bg-primary/15 backdrop-blur-sm flex items-center justify-center text-2xl flex-shrink-0">{currentQuote.emoji}</div>
           <div>
             <p className="text-sm font-medium leading-relaxed">{currentQuote.text}</p>
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Heart className="w-3 h-3 text-primary" /> মোটিভেশন</p>
