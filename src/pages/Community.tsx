@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { notifyNewMessage, notifyChallengeSent, notifyChallengeCompleted, notifyGroupChallenge, notifyGroupMessage, notifyFriendAdded, notifyGroupInvite } from "@/lib/notifications";
 
 type MainView = "chats" | "requests" | "groups" | "search";
 
@@ -59,6 +60,12 @@ const Community = () => {
   const [groupMessages, setGroupMessages] = useState<GroupMessage[]>([]);
   const [newGroupMessage, setNewGroupMessage] = useState("");
   const [sendingGroupMessage, setSendingGroupMessage] = useState(false);
+  const [showGroupChallengeModal, setShowGroupChallengeModal] = useState(false);
+  const [groupChallengeSubject, setGroupChallengeSubject] = useState("");
+  const [groupChallengeTopic, setGroupChallengeTopic] = useState("");
+  const [groupChallengeCount, setGroupChallengeCount] = useState(10);
+  const [groupChallengeCustomContent, setGroupChallengeCustomContent] = useState("");
+  const [sendingGroupChallenge, setSendingGroupChallenge] = useState(false);
 
   // Challenge target (friend or group)
   const [challengeTargetFriend, setChallengeTargetFriend] = useState<FriendProfile | null>(null);
@@ -183,7 +190,11 @@ const Community = () => {
     if (!newMessage.trim() || !user || !activeChatFriend) return;
     setSendingMessage(true);
     const { error } = await supabase.from("messages").insert({ sender_id: user.id, receiver_id: activeChatFriend.user_id, content: newMessage.trim() });
-    if (!error) setNewMessage("");
+    if (!error) {
+      setNewMessage("");
+      const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+      notifyNewMessage(user.id, myProfile?.full_name || "কেউ একজন", activeChatFriend.user_id);
+    }
     setSendingMessage(false);
   };
 
@@ -208,6 +219,8 @@ const Community = () => {
     const { error } = await supabase.from("friends").insert({ user_id: user.id, friend_id: toUserId });
     if (error) { toast({ title: "বন্ধু যোগ ব্যর্থ", variant: "destructive" }); return; }
     toast({ title: "বন্ধু যোগ হয়েছে! 🎉" });
+    const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+    notifyFriendAdded(myProfile?.full_name || "কেউ একজন", toUserId);
     setSearchResults(prev => prev.filter(r => r.user_id !== toUserId));
     fetchAll();
   };
@@ -238,6 +251,9 @@ const Community = () => {
     const { error } = await supabase.from("group_members").insert({ group_id: groupId, user_id: friendId, role: "member" });
     if (error) { toast({ title: "সদস্য যোগ ব্যর্থ", description: error.message, variant: "destructive" }); return; }
     toast({ title: "বন্ধু গ্রুপে যুক্ত হয়েছে! ✅" });
+    const group = groups.find(g => g.id === groupId);
+    const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+    notifyGroupInvite(myProfile?.full_name || "কেউ একজন", friendId, group?.name || "গ্রুপ");
     fetchGroupMembers(groupId);
   };
 
@@ -263,7 +279,17 @@ const Community = () => {
     if (!newGroupMessage.trim() || !user || !activeGroup) return;
     setSendingGroupMessage(true);
     const { error } = await supabase.from("group_messages").insert({ group_id: activeGroup.id, sender_id: user.id, content: newGroupMessage.trim() });
-    if (!error) setNewGroupMessage("");
+    if (!error) {
+      setNewGroupMessage("");
+      // Notify other group members
+      const members = groupMembers[activeGroup.id] || [];
+      const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+      members.forEach(m => {
+        if (m.user_id !== user.id) {
+          notifyGroupMessage(myProfile?.full_name || "কেউ একজন", m.user_id, activeGroup.name);
+        }
+      });
+    }
     setSendingGroupMessage(false);
   };
 
@@ -297,6 +323,8 @@ const Community = () => {
       if (error) throw error;
 
       toast({ title: "চ্যালেঞ্জ পাঠানো হয়েছে! ⚔️" });
+      const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+      notifyChallengeSent(myProfile?.full_name || "কেউ একজন", challengeTargetFriend.user_id, challengeSubject);
       setShowChallengeModal(false);
       setChallengeSubject(""); setChallengeTopic(""); setChallengeCustomContent("");
       fetchChallenges();
@@ -347,6 +375,10 @@ const Community = () => {
 
     setChallengeMode("result");
     toast({ title: `তুমি ${score}/${challengeQuestions.length} পেয়েছো! 🎯` });
+    // Notify opponent
+    const otherPlayerId = isChallenger ? activeChallenge.challenged_id : activeChallenge.challenger_id;
+    const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+    notifyChallengeCompleted(myProfile?.full_name || "কেউ একজন", otherPlayerId, activeChallenge.subject, score, challengeQuestions.length);
     fetchChallenges();
   };
 
@@ -354,6 +386,53 @@ const Community = () => {
     setActiveChallenge(challenge);
     setChallengeQuestions(challenge.questions as any[]);
     setChallengeMode("result");
+  };
+
+  // Group Challenge function - sends challenge to all group members
+  const sendGroupChallenge = async () => {
+    if (!user || !activeGroup || !groupChallengeSubject.trim()) return;
+    setSendingGroupChallenge(true);
+    try {
+      const members = groupMembers[activeGroup.id] || [];
+      const otherMembers = members.filter(m => m.user_id !== user.id);
+      if (otherMembers.length === 0) { toast({ title: "গ্রুপে অন্য সদস্য নেই!", variant: "destructive" }); setSendingGroupChallenge(false); return; }
+
+      const body: any = { subject: groupChallengeSubject, questionCount: groupChallengeCount, classLevel: "10" };
+      if (groupChallengeTopic) body.topic = groupChallengeTopic;
+      if (groupChallengeCustomContent.trim()) body.customContent = groupChallengeCustomContent.trim();
+
+      const resp = await fetch(GENERATE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) throw new Error("Failed");
+      const data = await resp.json();
+      if (!data.questions?.length) throw new Error("No questions");
+
+      // Create a challenge for each group member
+      const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+      for (const member of otherMembers) {
+        await supabase.from("challenges").insert({
+          challenger_id: user.id,
+          challenged_id: member.user_id,
+          subject: groupChallengeSubject,
+          topic: groupChallengeTopic || null,
+          question_count: groupChallengeCount,
+          questions: data.questions,
+          status: "pending",
+        });
+        notifyGroupChallenge(myProfile?.full_name || "কেউ একজন", member.user_id, activeGroup.name, groupChallengeSubject);
+      }
+
+      toast({ title: `গ্রুপ চ্যালেঞ্জ পাঠানো হয়েছে! ⚔️🔥 (${otherMembers.length} জনকে)` });
+      setShowGroupChallengeModal(false);
+      setGroupChallengeSubject(""); setGroupChallengeTopic(""); setGroupChallengeCustomContent("");
+      fetchChallenges();
+    } catch (e) {
+      toast({ title: "চ্যালেঞ্জ পাঠানো ব্যর্থ", variant: "destructive" });
+    }
+    setSendingGroupChallenge(false);
   };
 
   const canTakeChallenge = (c: Challenge) => {
@@ -499,11 +578,16 @@ const Community = () => {
             <p className="text-sm font-semibold">{activeGroup.name}</p>
             <p className="text-xs text-muted-foreground">{members.length} সদস্য</p>
           </div>
-          {activeGroup.created_by === user?.id && (
-            <Button variant="outline" size="sm" className="rounded-lg gap-1 h-8" onClick={() => { setShowInviteModal(activeGroup.id); }}>
-              <UserPlus className="w-3 h-3" /> যোগ
+          <div className="flex gap-1.5">
+            <Button variant="outline" size="sm" className="rounded-lg gap-1 h-8" onClick={() => setShowGroupChallengeModal(true)}>
+              <Swords className="w-3 h-3" /> চ্যালেঞ্জ
             </Button>
-          )}
+            {activeGroup.created_by === user?.id && (
+              <Button variant="outline" size="sm" className="rounded-lg gap-1 h-8" onClick={() => { setShowInviteModal(activeGroup.id); }}>
+                <UserPlus className="w-3 h-3" /> যোগ
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Members strip */}
@@ -594,6 +678,24 @@ const Community = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Group Challenge Modal */}
+        <ChallengeModal
+          show={showGroupChallengeModal}
+          onClose={() => setShowGroupChallengeModal(false)}
+          targetName={`${activeGroup.name} গ্রুপের সবাই`}
+          subject={groupChallengeSubject}
+          setSubject={setGroupChallengeSubject}
+          topic={groupChallengeTopic}
+          setTopic={setGroupChallengeTopic}
+          count={groupChallengeCount}
+          setCount={setGroupChallengeCount}
+          customContent={groupChallengeCustomContent}
+          setCustomContent={setGroupChallengeCustomContent}
+          sending={sendingGroupChallenge}
+          onSend={sendGroupChallenge}
+          isGroup
+        />
       </div>
     );
   }
@@ -946,13 +1048,13 @@ const Community = () => {
 };
 
 // Challenge Modal Component
-const ChallengeModal = ({ show, onClose, targetName, subject, setSubject, topic, setTopic, count, setCount, customContent, setCustomContent, sending, onSend }: {
+const ChallengeModal = ({ show, onClose, targetName, subject, setSubject, topic, setTopic, count, setCount, customContent, setCustomContent, sending, onSend, isGroup }: {
   show: boolean; onClose: () => void; targetName: string;
   subject: string; setSubject: (v: string) => void;
   topic: string; setTopic: (v: string) => void;
   count: number; setCount: (v: number) => void;
   customContent: string; setCustomContent: (v: string) => void;
-  sending: boolean; onSend: () => void;
+  sending: boolean; onSend: () => void; isGroup?: boolean;
 }) => (
   <AnimatePresence>
     {show && (
@@ -961,10 +1063,10 @@ const ChallengeModal = ({ show, onClose, targetName, subject, setSubject, topic,
         <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
           className="bg-background border border-border rounded-2xl p-6 max-w-sm w-full space-y-4 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between">
-            <h3 className="font-display font-bold">⚔️ 1v1 চ্যালেঞ্জ</h3>
+            <h3 className="font-display font-bold">{isGroup ? "🏆 গ্রুপ চ্যালেঞ্জ" : "⚔️ 1v1 চ্যালেঞ্জ"}</h3>
             <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted/30"><X className="w-4 h-4" /></button>
           </div>
-          <p className="text-xs text-muted-foreground">{targetName} কে MCQ চ্যালেঞ্জ পাঠাও</p>
+          <p className="text-xs text-muted-foreground">{isGroup ? `${targetName} কে MCQ চ্যালেঞ্জ দাও` : `${targetName} কে MCQ চ্যালেঞ্জ পাঠাও`}</p>
           <div className="space-y-3">
             <input type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder="বিষয় (যেমন: গণিত) *"
               className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 placeholder:text-muted-foreground" />
