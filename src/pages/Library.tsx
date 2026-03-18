@@ -64,9 +64,9 @@ const Library = () => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userClass, setUserClass] = useState<number | null>(null);
-  const { user } = useAuth();
   const [showUpload, setShowUpload] = useState(false);
   const [viewingPdf, setViewingPdf] = useState<LibraryItem | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [cachedIds, setCachedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
