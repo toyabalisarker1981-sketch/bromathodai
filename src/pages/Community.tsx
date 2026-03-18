@@ -207,39 +207,16 @@ const Community = () => {
     setSearching(false);
   };
 
-  const sendFriendRequest = async (toUserId: string) => {
+  const addFriendDirectly = async (toUserId: string) => {
     if (!user) return;
     const { data: existing } = await supabase.from("friends").select("id").or(`and(user_id.eq.${user.id},friend_id.eq.${toUserId}),and(user_id.eq.${toUserId},friend_id.eq.${user.id})`);
     if (existing && existing.length > 0) { toast({ title: "ইতোমধ্যে বন্ধু!" }); return; }
-    const { data: existingReq } = await supabase.from("friend_requests").select("id").eq("from_user_id", user.id).eq("to_user_id", toUserId).eq("status", "pending");
-    if (existingReq && existingReq.length > 0) { toast({ title: "ইতোমধ্যে রিকোয়েস্ট পাঠানো হয়েছে!" }); return; }
-    const { error } = await supabase.from("friend_requests").insert({ from_user_id: user.id, to_user_id: toUserId });
-    if (!error) {
-      toast({ title: "Friend Request পাঠানো হয়েছে! ✅" });
-      setSearchResults(prev => prev.filter(r => r.user_id !== toUserId));
-      fetchRequests();
-    }
-  };
-
-  const handleAcceptRequest = async (requestId: string, fromUserId: string) => {
-    if (!user) return;
-    const { error: updateError } = await supabase.from("friend_requests").update({ status: "accepted" }).eq("id", requestId);
-    if (updateError) { toast({ title: "রিকোয়েস্ট আপডেট ব্যর্থ", variant: "destructive" }); return; }
-    // Only insert one row where user_id = current user (RLS allows this)
-    const { error: insertError } = await supabase.from("friends").insert({ user_id: user.id, friend_id: fromUserId });
-    if (insertError) { toast({ title: "বন্ধু যোগ ব্যর্থ", variant: "destructive" }); return; }
+    const { error } = await supabase.from("friends").insert({ user_id: user.id, friend_id: toUserId });
+    if (error) { toast({ title: "বন্ধু যোগ ব্যর্থ", variant: "destructive" }); return; }
     toast({ title: "বন্ধু যোগ হয়েছে! 🎉" });
+    setSearchResults(prev => prev.filter(r => r.user_id !== toUserId));
     fetchAll();
   };
-
-  const handleRejectRequest = async (requestId: string) => {
-    await supabase.from("friend_requests").delete().eq("id", requestId);
-    toast({ title: "রিকোয়েস্ট বাতিল করা হয়েছে" });
-    fetchRequests();
-  };
-
-  const cancelSentRequest = async (requestId: string) => {
-    await supabase.from("friend_requests").delete().eq("id", requestId);
     fetchRequests();
   };
 
