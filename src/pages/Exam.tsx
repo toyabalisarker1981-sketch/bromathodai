@@ -339,11 +339,41 @@ const Exam = () => {
         </div>
 
         {/* Submit */}
-        <div className="sticky bottom-20 md:bottom-4">
-          <Button variant="glow" className="w-full rounded-xl gap-2 text-base py-6" onClick={finishExam}>
+        <div className="sticky bottom-20 md:bottom-4 flex gap-3">
+          <Button variant="glow" className="flex-1 rounded-xl gap-2 text-base py-6" onClick={finishExam}>
             <Target className="w-5 h-5" /> পরীক্ষা শেষ করো ({answeredCount}/{questions.length})
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  // After exam - show OMR upload option or result
+  if (mode === "scan") {
+    return (
+      <div className="p-4 lg:p-8 max-w-3xl mx-auto space-y-6">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-8 text-center space-y-4">
+          <Upload className="w-12 h-12 text-primary mx-auto" />
+          <h2 className="font-display font-bold text-lg">OMR Sheet আপলোড করো 📸</h2>
+          <p className="text-sm text-muted-foreground">তোমার দাগানো OMR Sheet এর ছবি তুলো বা গ্যালারী থেকে আপলোড করো</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div>
+              <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleOMRScan} className="hidden" id="omr-camera" />
+              <Button variant="outline" className="rounded-xl gap-2 w-full" onClick={() => cameraRef.current?.click()} disabled={scanning}>
+                {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />} ক্যামেরা দিয়ে তোলো
+              </Button>
+            </div>
+            <div>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleOMRScan} className="hidden" id="omr-gallery" />
+              <Button variant="outline" className="rounded-xl gap-2 w-full" onClick={() => fileInputRef.current?.click()} disabled={scanning}>
+                {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />} গ্যালারী থেকে
+              </Button>
+            </div>
+          </div>
+          <Button variant="outline" className="rounded-xl w-full mt-2" onClick={() => setMode("result")}>
+            OMR ছাড়া রেজাল্ট দেখো
+          </Button>
+        </motion.div>
       </div>
     );
   }
@@ -357,7 +387,7 @@ const Exam = () => {
             <Target className="w-10 h-10 text-primary" />
           </div>
           <div>
-            <h2 className="text-3xl font-display font-bold gradient-text">{score}/{questions.length}</h2>
+            <h2 className="text-3xl font-display font-bold text-primary">{score}/{questions.length}</h2>
             <p className="text-lg text-muted-foreground">{percentage}% সঠিক</p>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -379,27 +409,36 @@ const Exam = () => {
           </p>
         </motion.div>
 
-        {/* Review */}
+        {/* Review with explanations */}
+        <h3 className="text-sm font-semibold">প্রশ্ন রিভিউ ও ব্যাখ্যা</h3>
         <div className="space-y-3 max-h-[500px] overflow-y-auto scrollbar-hidden">
-          {questions.map((q, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-              className="glass-card rounded-xl p-4 space-y-2">
-              <div className="flex items-start gap-2">
-                {userAnswers[i] === q.correctIndex ? <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" /> : <XCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />}
-                <p className="text-sm font-medium">{i + 1}. {q.question}</p>
-              </div>
-              <p className="text-xs text-primary ml-7">✅ {q.options[q.correctIndex]}</p>
-              {userAnswers[i] !== null && userAnswers[i] !== q.correctIndex && (
-                <p className="text-xs text-destructive ml-7">❌ তোমার উত্তর: {q.options[userAnswers[i]!]}</p>
-              )}
-              <p className="text-xs text-muted-foreground ml-7">💡 {q.explanation}</p>
-            </motion.div>
-          ))}
+          {questions.map((q, i) => {
+            const isCorrect = userAnswers[i] === q.correctIndex;
+            return (
+              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                className={`glass-card rounded-xl p-4 space-y-2 ${!isCorrect ? "border-destructive/20" : "border-primary/20"}`}>
+                <div className="flex items-start gap-2">
+                  {isCorrect ? <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" /> : <XCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />}
+                  <p className="text-sm font-medium">{i + 1}. {q.question}</p>
+                </div>
+                <p className="text-xs text-primary ml-7">✅ সঠিক উত্তর: {q.options[q.correctIndex]}</p>
+                {userAnswers[i] !== null && userAnswers[i] !== q.correctIndex && (
+                  <p className="text-xs text-destructive ml-7">❌ তোমার উত্তর: {q.options[userAnswers[i]!]}</p>
+                )}
+                {userAnswers[i] === null && (
+                  <p className="text-xs text-muted-foreground ml-7">⚠️ উত্তর দেওয়া হয়নি</p>
+                )}
+                <div className="ml-7 p-2 rounded-lg bg-muted/20">
+                  <p className="text-xs text-muted-foreground">💡 <span className="font-medium">ব্যাখ্যা:</span> {q.explanation}</p>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
 
         <div className="flex gap-3">
           <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setMode("setup")}><ArrowLeft className="w-4 h-4 mr-2" /> নতুন পরীক্ষা</Button>
-          <Button variant="glow" className="flex-1 rounded-xl" onClick={generateExam}><Sparkles className="w-4 h-4 mr-2" /> আবার পরীক্ষা</Button>
+          <Button className="flex-1 rounded-xl" onClick={() => setMode("scan")}><Upload className="w-4 h-4 mr-2" /> OMR আপলোড</Button>
         </div>
       </div>
     );
