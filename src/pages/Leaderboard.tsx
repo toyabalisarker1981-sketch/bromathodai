@@ -57,18 +57,14 @@ const Leaderboard = () => {
   }, [user, myClass]);
 
   const fetchLeaderboard = async () => {
+    if (!myClass) return;
     setLoading(true);
-    let query = supabase
+    const { data } = await supabase
       .from("profiles")
       .select("user_id, full_name, xp, level, streak_days, student_class, email")
+      .eq("student_class", myClass)
       .order("xp", { ascending: false })
       .limit(100);
-
-    if (filterClass !== "all") {
-      query = query.eq("student_class", parseInt(filterClass));
-    }
-
-    const { data } = await query;
     if (data) {
       setEntries(data as LeaderboardEntry[]);
       if (user) {
