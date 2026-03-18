@@ -88,6 +88,9 @@ const Dashboard = () => {
         <p className="text-muted-foreground text-sm">{profile?.student_class ? `ক্লাস ${profile.student_class} · ` : ""}তোমার শেখার যাত্রা চালিয়ে যাও!</p>
       </motion.div>
 
+      {/* Dynamic Banner */}
+      <DynamicBanner />
+
       {/* Quote */}
       <motion.div key={quoteIndex} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="liquid-glass-glow rounded-2xl p-5 border-l-4 border-primary">
         <div className="flex items-center gap-3">
