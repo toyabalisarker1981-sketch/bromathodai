@@ -8,6 +8,7 @@ import {
   Users, Play, ClipboardList
 } from "lucide-react";
 import BentoCard from "@/components/dashboard/BentoCard";
+import DynamicBanner from "@/components/dashboard/DynamicBanner";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
