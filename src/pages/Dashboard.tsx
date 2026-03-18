@@ -100,7 +100,7 @@ const Dashboard = () => {
 
       {/* XP + Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-2xl p-5 lg:col-span-2">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="liquid-glass rounded-2xl p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2"><Flame className="w-5 h-5 text-primary" /><span className="font-display font-semibold">লেভেল {level}</span></div>
             <span className="text-sm text-muted-foreground">{xp} / {nextLevelXp} XP</span>
