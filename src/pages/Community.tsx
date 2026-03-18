@@ -190,7 +190,11 @@ const Community = () => {
     if (!newMessage.trim() || !user || !activeChatFriend) return;
     setSendingMessage(true);
     const { error } = await supabase.from("messages").insert({ sender_id: user.id, receiver_id: activeChatFriend.user_id, content: newMessage.trim() });
-    if (!error) setNewMessage("");
+    if (!error) {
+      setNewMessage("");
+      const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+      notifyNewMessage(user.id, myProfile?.full_name || "কেউ একজন", activeChatFriend.user_id);
+    }
     setSendingMessage(false);
   };
 
