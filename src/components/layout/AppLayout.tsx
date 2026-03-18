@@ -25,7 +25,7 @@ const AppLayout = () => {
       <div className="fixed inset-0 pointer-events-none" style={{ background: "var(--gradient-glow)" }} />
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-20 lg:w-64 fixed inset-y-0 left-0 z-40 border-r border-white/[0.06] bg-background/40 backdrop-blur-2xl">
+      <aside className="hidden md:flex flex-col w-20 lg:w-64 fixed inset-y-0 left-0 z-40 border-r border-white/[0.06] bg-background/30 backdrop-blur-3xl">
         <div className="flex items-center gap-3 p-4 lg:px-6 h-16 border-b border-white/[0.06]">
           <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/10">
             <Brain className="w-5 h-5 text-primary" />
@@ -66,7 +66,7 @@ const AppLayout = () => {
       </main>
 
       {/* Mobile bottom nav - show first 5 + more */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-white/[0.06] bg-background/60 backdrop-blur-2xl">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-white/[0.06] bg-background/50 backdrop-blur-3xl">
         <div className="flex items-center justify-around h-16">
           {navItems.slice(0, 5).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.to === "/"}

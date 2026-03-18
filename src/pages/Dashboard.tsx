@@ -88,9 +88,9 @@ const Dashboard = () => {
       </motion.div>
 
       {/* Quote */}
-      <motion.div key={quoteIndex} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-5 border-l-4 border-primary">
+      <motion.div key={quoteIndex} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="liquid-glass-glow rounded-2xl p-5 border-l-4 border-primary">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center text-2xl flex-shrink-0">{currentQuote.emoji}</div>
+          <div className="w-12 h-12 rounded-xl bg-primary/15 backdrop-blur-sm flex items-center justify-center text-2xl flex-shrink-0">{currentQuote.emoji}</div>
           <div>
             <p className="text-sm font-medium leading-relaxed">{currentQuote.text}</p>
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Heart className="w-3 h-3 text-primary" /> মোটিভেশন</p>
@@ -100,7 +100,7 @@ const Dashboard = () => {
 
       {/* XP + Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-2xl p-5 lg:col-span-2">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="liquid-glass rounded-2xl p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2"><Flame className="w-5 h-5 text-primary" /><span className="font-display font-semibold">লেভেল {level}</span></div>
             <span className="text-sm text-muted-foreground">{xp} / {nextLevelXp} XP</span>
@@ -120,7 +120,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {allFeatures.map((feature, i) => (
             <motion.div key={feature.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}
-              onClick={() => navigate(feature.path)} className="glass-card-hover rounded-2xl p-4 cursor-pointer group">
+              onClick={() => navigate(feature.path)} className="liquid-glass-hover rounded-2xl p-4 cursor-pointer group">
               <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-3`}>
                 <feature.icon className="w-5 h-5 text-foreground" />
               </div>
@@ -133,7 +133,7 @@ const Dashboard = () => {
       </motion.div>
 
       {/* Achievements */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="glass-card rounded-2xl p-5 space-y-3">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="liquid-glass rounded-2xl p-5 space-y-3">
         <h2 className="font-display font-semibold flex items-center gap-2 text-sm"><Trophy className="w-4 h-4 text-secondary" /> অ্যাচিভমেন্টস</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
