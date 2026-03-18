@@ -1063,10 +1063,10 @@ const ChallengeModal = ({ show, onClose, targetName, subject, setSubject, topic,
         <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
           className="bg-background border border-border rounded-2xl p-6 max-w-sm w-full space-y-4 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between">
-            <h3 className="font-display font-bold">⚔️ 1v1 চ্যালেঞ্জ</h3>
+            <h3 className="font-display font-bold">{isGroup ? "🏆 গ্রুপ চ্যালেঞ্জ" : "⚔️ 1v1 চ্যালেঞ্জ"}</h3>
             <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted/30"><X className="w-4 h-4" /></button>
           </div>
-          <p className="text-xs text-muted-foreground">{targetName} কে MCQ চ্যালেঞ্জ পাঠাও</p>
+          <p className="text-xs text-muted-foreground">{isGroup ? `${targetName} কে MCQ চ্যালেঞ্জ দাও` : `${targetName} কে MCQ চ্যালেঞ্জ পাঠাও`}</p>
           <div className="space-y-3">
             <input type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder="বিষয় (যেমন: গণিত) *"
               className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 placeholder:text-muted-foreground" />
