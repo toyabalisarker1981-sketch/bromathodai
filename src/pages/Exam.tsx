@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-
+import { updateXpAndStreak, saveExamResult } from "@/lib/xpHelper";
 interface ExamQuestion {
   question: string;
   options: string[];
@@ -161,23 +161,22 @@ const Exam = () => {
     setUserAnswers(newAnswers);
   };
 
-  const finishExam = useCallback(() => {
+  const finishExam = useCallback(async () => {
     setTimerActive(false);
     setMode("scan");
     if (!user) return;
     const correctCount = userAnswers.filter((a, i) => a === questions[i]?.correctIndex).length;
     const xpEarned = correctCount * 10 + questions.length * 2;
-    supabase.from("profiles").select("xp, level, streak_days").eq("user_id", user.id).single()
-      .then(({ data: profile }) => {
-        if (profile) {
-          const newXp = (profile.xp || 0) + xpEarned;
-          const newLevel = Math.floor(newXp / 500) + 1;
-          const newStreak = (profile.streak_days || 0) + 1;
-          supabase.from("profiles").update({ xp: newXp, level: newLevel, streak_days: newStreak }).eq("user_id", user.id).then(() => {
-            toast({ title: `+${xpEarned} XP অর্জন! 🎉` });
-          });
-        }
-      });
+    const accuracy = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
+
+    // Save exam result
+    await saveExamResult(user.id, questions.length, correctCount, accuracy, userAnswers);
+
+    // Update XP with proper daily streak
+    const result = await updateXpAndStreak(user.id, xpEarned);
+    if (result) {
+      toast({ title: `+${result.xpEarned} XP অর্জন! 🎉`, description: `লেভেল ${result.level} · স্ট্রিক ${result.streak_days} দিন` });
+    }
   }, [user, userAnswers, questions]);
 
   const handleOMRScan = async (e: React.ChangeEvent<HTMLInputElement>) => {

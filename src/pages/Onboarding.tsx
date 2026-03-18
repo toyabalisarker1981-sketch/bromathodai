@@ -1,18 +1,32 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, ArrowRight, GraduationCap, Languages, Sparkles } from "lucide-react";
+import { ArrowRight, GraduationCap, Languages, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState<"class" | "language">("class");
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   const [language, setLanguage] = useState<"bn" | "en" | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const proceed = () => {
-    if (step === "class" && selectedClass) setStep("language");
-    else if (step === "language" && language) navigate("/");
+  const proceed = async () => {
+    if (step === "class" && selectedClass) {
+      setStep("language");
+    } else if (step === "language" && language && user) {
+      setSaving(true);
+      await supabase.from("profiles").update({
+        student_class: selectedClass,
+        language,
+        email: user.email,
+      }).eq("user_id", user.id);
+      setSaving(false);
+      navigate("/");
+    }
   };
 
   return (
@@ -78,8 +92,8 @@ const Onboarding = () => {
                 </button>
               ))}
             </div>
-            <Button variant="glow" className="w-full rounded-xl gap-2" onClick={proceed} disabled={!language}>
-              <Sparkles className="w-4 h-4" /> শেখা শুরু করো!
+            <Button variant="glow" className="w-full rounded-xl gap-2" onClick={proceed} disabled={!language || saving}>
+              <Sparkles className="w-4 h-4" /> {saving ? "সেভ হচ্ছে..." : "শেখা শুরু করো!"}
             </Button>
           </motion.div>
         )}

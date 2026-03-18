@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      challenges: {
+        Row: {
+          challenged_answers: Json | null
+          challenged_id: string
+          challenged_score: number | null
+          challenger_answers: Json | null
+          challenger_id: string
+          challenger_score: number | null
+          class_level: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          question_count: number
+          questions: Json
+          status: string
+          subject: string
+          topic: string | null
+        }
+        Insert: {
+          challenged_answers?: Json | null
+          challenged_id: string
+          challenged_score?: number | null
+          challenger_answers?: Json | null
+          challenger_id: string
+          challenger_score?: number | null
+          class_level?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          question_count?: number
+          questions?: Json
+          status?: string
+          subject: string
+          topic?: string | null
+        }
+        Update: {
+          challenged_answers?: Json | null
+          challenged_id?: string
+          challenged_score?: number | null
+          challenger_answers?: Json | null
+          challenger_id?: string
+          challenger_score?: number | null
+          class_level?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          question_count?: number
+          questions?: Json
+          status?: string
+          subject?: string
+          topic?: string | null
+        }
+        Relationships: []
+      }
       community_exams: {
         Row: {
           created_at: string
@@ -149,6 +203,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      group_invites: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          invited_by: string
+          invited_user_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          invited_by: string
+          invited_user_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          invited_by?: string
+          invited_user_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_invites_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       group_members: {
         Row: {
@@ -321,6 +410,7 @@ export type Database = {
           full_name: string | null
           id: string
           language: string | null
+          last_active_date: string | null
           level: number | null
           streak_days: number | null
           student_class: number | null
@@ -334,6 +424,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           language?: string | null
+          last_active_date?: string | null
           level?: number | null
           streak_days?: number | null
           student_class?: number | null
@@ -347,6 +438,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           language?: string | null
+          last_active_date?: string | null
           level?: number | null
           streak_days?: number | null
           student_class?: number | null
