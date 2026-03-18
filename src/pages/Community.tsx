@@ -375,6 +375,10 @@ const Community = () => {
 
     setChallengeMode("result");
     toast({ title: `তুমি ${score}/${challengeQuestions.length} পেয়েছো! 🎯` });
+    // Notify opponent
+    const otherPlayerId = isChallenger ? activeChallenge.challenged_id : activeChallenge.challenger_id;
+    const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+    notifyChallengeCompleted(myProfile?.full_name || "কেউ একজন", otherPlayerId, activeChallenge.subject, score, challengeQuestions.length);
     fetchChallenges();
   };
 
