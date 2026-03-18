@@ -58,9 +58,9 @@ const Leaderboard = () => {
       .order("xp", { ascending: false })
       .limit(100);
 
-    // If user has a class, filter by that class OR null class
+    // Only show users from the same class
     if (studentClass) {
-      query = query.or(`student_class.eq.${studentClass},student_class.is.null`);
+      query = query.eq("student_class", studentClass);
     }
 
     const { data } = await query;
