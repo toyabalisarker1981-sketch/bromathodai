@@ -106,19 +106,15 @@ const Leaderboard = () => {
         <p className="text-sm text-muted-foreground mt-1">সেরা স্টুডেন্টদের র‍্যাংকিং 🏆</p>
       </motion.div>
 
-      {/* Class filter - scrollable */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hidden">
-        {CLASS_OPTIONS.map(opt => (
-          <button key={opt.value} onClick={() => setFilterClass(opt.value)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
-              filterClass === opt.value 
-                ? "bg-primary text-primary-foreground shadow-md" 
-                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-            }`}>
-            {opt.label}
-          </button>
-        ))}
-      </div>
+      {/* Class badge */}
+      {myClass && (
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-primary-foreground shadow-md">
+            ক্লাস {myClass}
+          </span>
+          <span className="text-xs text-muted-foreground">তোমার ক্লাসের র‍্যাংকিং</span>
+        </div>
+      )}
 
       {/* My Rank */}
       {myProfile && myRank && (
