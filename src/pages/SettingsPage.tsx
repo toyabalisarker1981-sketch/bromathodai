@@ -267,7 +267,34 @@ const SettingsPage = () => {
         </div>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+      {/* Developer Information */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-2xl p-5 space-y-3">
+        <h2 className="font-display font-semibold text-sm flex items-center gap-2">
+          <span className="text-lg">👨‍💻</span> Developer Information
+        </h2>
+        <div className="space-y-2.5">
+          {[
+            { label: "Name", value: "MD OTUNU", icon: "👤" },
+            { label: "WhatsApp", value: "+8801993566618", icon: "📱", href: "https://wa.me/8801993566618" },
+            { label: "Email", value: "arfinistyckatonu@gmail.com", icon: "📧", href: "mailto:arfinistyckatonu@gmail.com" },
+            { label: "Address", value: "Rangpur, Badarganj, Gupinatpur, Bothat, Kobiraj Para, Bangladesh", icon: "📍" },
+          ].map((item, i) => (
+            <div key={i} className="flex items-start gap-3 p-2.5 rounded-xl bg-muted/20">
+              <span className="text-base flex-shrink-0">{item.icon}</span>
+              <div>
+                <p className="text-xs text-muted-foreground">{item.label}</p>
+                {item.href ? (
+                  <a href={item.href} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline">{item.value}</a>
+                ) : (
+                  <p className="text-sm font-medium">{item.value}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
         <Button variant="outline" className="w-full rounded-xl gap-2 border-destructive/30 text-destructive hover:bg-destructive/10" onClick={handleSignOut}>
           <LogOut className="w-4 h-4" /> সাইন আউট
         </Button>
