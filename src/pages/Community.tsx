@@ -1048,13 +1048,13 @@ const Community = () => {
 };
 
 // Challenge Modal Component
-const ChallengeModal = ({ show, onClose, targetName, subject, setSubject, topic, setTopic, count, setCount, customContent, setCustomContent, sending, onSend }: {
+const ChallengeModal = ({ show, onClose, targetName, subject, setSubject, topic, setTopic, count, setCount, customContent, setCustomContent, sending, onSend, isGroup }: {
   show: boolean; onClose: () => void; targetName: string;
   subject: string; setSubject: (v: string) => void;
   topic: string; setTopic: (v: string) => void;
   count: number; setCount: (v: number) => void;
   customContent: string; setCustomContent: (v: string) => void;
-  sending: boolean; onSend: () => void;
+  sending: boolean; onSend: () => void; isGroup?: boolean;
 }) => (
   <AnimatePresence>
     {show && (
