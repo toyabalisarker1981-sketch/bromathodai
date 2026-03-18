@@ -678,6 +678,24 @@ const Community = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Group Challenge Modal */}
+        <ChallengeModal
+          show={showGroupChallengeModal}
+          onClose={() => setShowGroupChallengeModal(false)}
+          targetName={`${activeGroup.name} গ্রুপের সবাই`}
+          subject={groupChallengeSubject}
+          setSubject={setGroupChallengeSubject}
+          topic={groupChallengeTopic}
+          setTopic={setGroupChallengeTopic}
+          count={groupChallengeCount}
+          setCount={setGroupChallengeCount}
+          customContent={groupChallengeCustomContent}
+          setCustomContent={setGroupChallengeCustomContent}
+          sending={sendingGroupChallenge}
+          onSend={sendGroupChallenge}
+          isGroup
+        />
       </div>
     );
   }
