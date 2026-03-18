@@ -87,9 +87,17 @@ const Library = () => {
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchItems();
+    if (!user) return;
     checkAdmin();
+    supabase.from("profiles").select("student_class").eq("user_id", user.id).single()
+      .then(({ data }) => {
+        if (data?.student_class) setUserClass(data.student_class);
+      });
   }, [user]);
+
+  useEffect(() => {
+    if (userClass !== null || isAdmin) fetchItems();
+  }, [userClass, isAdmin]);
 
   useEffect(() => {
     const checkCachedItems = async () => {
