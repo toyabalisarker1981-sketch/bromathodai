@@ -71,7 +71,7 @@ const Dashboard = () => {
     { label: "🎯 কুইজ ইঞ্জিন", desc: "NCTB সিলেবাস অনুযায়ী AI কুইজ", icon: Brain, path: "/quiz", gradient: "from-purple-500/20 to-pink-500/20" },
     { label: "📋 পরীক্ষা মোড", desc: "OMR স্টাইল MCQ পরীক্ষা ও AI স্ক্যান", icon: ClipboardList, path: "/exam", gradient: "from-red-500/20 to-rose-500/20" },
     { label: "📚 লাইব্রেরী", desc: `${libraryCount}টি বই ও গাইড পড়ো ফ্রিতে`, icon: Library, path: "/library", gradient: "from-amber-500/20 to-orange-500/20" },
-    { label: "✨ কনটেন্ট তৈরি", desc: "মাইন্ড ম্যাপ, ফ্ল্যাশ কার্ড, ফর্মুলা শীট", icon: Calculator, path: "/create-content", gradient: "from-cyan-500/20 to-sky-500/20" },
+    { label: "🔬 ক্যালকুলেটর", desc: "সায়েন্টিফিক ক্যালকুলেটর ব্যবহার করো", icon: Calculator, path: "/calculator", gradient: "from-cyan-500/20 to-sky-500/20" },
     { label: "👥 কমিউনিটি", desc: "বন্ধু যোগ করো, গ্রুপে পরীক্ষা দাও", icon: Users, path: "/community", gradient: "from-violet-500/20 to-purple-500/20" },
     { label: "🎬 StudyTube", desc: "শিক্ষামূলক ভিডিও দেখো ও শেখো", icon: Play, path: "/studytube", gradient: "from-rose-500/20 to-pink-500/20" },
     { label: "🏆 লিডারবোর্ড", desc: "সেরা স্টুডেন্টদের র‍্যাংকিং দেখো", icon: Trophy, path: "/leaderboard", gradient: "from-yellow-500/20 to-amber-500/20" },

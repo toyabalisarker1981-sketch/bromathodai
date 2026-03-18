@@ -118,10 +118,17 @@ const Library = () => {
 
   const fetchItems = async () => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .from("library_items")
       .select("*")
       .order("created_at", { ascending: false });
+
+    // Non-admin users only see their own class
+    if (!isAdmin && userClass) {
+      query = query.eq("class_level", userClass);
+    }
+
+    const { data } = await query;
     if (data) setItems(data as LibraryItem[]);
     setLoading(false);
   };

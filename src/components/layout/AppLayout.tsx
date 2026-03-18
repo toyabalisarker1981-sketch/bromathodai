@@ -10,7 +10,7 @@ const navItems = [
   { to: "/library", icon: Library, label: "লাইব্রেরী" },
   { to: "/quiz", icon: Brain, label: "কুইজ" },
   { to: "/exam", icon: ClipboardList, label: "পরীক্ষা" },
-  { to: "/create-content", icon: Sparkles, label: "কনটেন্ট" },
+  { to: "/calculator", icon: Calculator, label: "ক্যালকুলেটর" },
   { to: "/community", icon: Users, label: "কমিউনিটি" },
   { to: "/studytube", icon: Play, label: "StudyTube" },
   { to: "/leaderboard", icon: Trophy, label: "র‍্যাংকিং" },
