@@ -126,7 +126,7 @@ const Leaderboard = () => {
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-2">
         <h3 className="text-sm font-semibold">
-          {myClass !== null ? `ক্লাস ${myClass} এর স্টুডেন্ট` : "ক্লাস সেট করা হয়নি"}
+          সকল স্টুডেন্ট
           <span className="text-muted-foreground font-normal ml-1">({entries.length} জন)</span>
         </h3>
         {loading ? (
@@ -136,12 +136,8 @@ const Leaderboard = () => {
         ) : entries.length === 0 ? (
           <div className="liquid-glass rounded-2xl p-8 text-center">
             <Trophy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">
-              {myClass !== null ? "তোমার ক্লাসের অন্য ইউজার এখনো নেই" : "তোমার ক্লাস সেট করা নেই"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {myClass !== null ? "যারা ক্লাস সেট করবে, তারা এখানে দেখাবে" : "Settings থেকে ক্লাস সেট করলে শুধু তোমার ক্লাসের ইউজার দেখাবে"}
-            </p>
+            <p className="text-sm text-muted-foreground">এখনো কোনো স্টুডেন্ট নেই</p>
+            <p className="text-xs text-muted-foreground mt-1">কুইজ বা পরীক্ষা দিয়ে XP অর্জন করো!</p>
           </div>
         ) : (
           entries.map((entry, i) => {
