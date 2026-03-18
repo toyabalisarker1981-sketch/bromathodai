@@ -25,8 +25,8 @@ const AppLayout = () => {
       <div className="fixed inset-0 pointer-events-none" style={{ background: "var(--gradient-glow)" }} />
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-20 lg:w-64 fixed inset-y-0 left-0 z-40 border-r border-white/[0.06] bg-background/30 backdrop-blur-3xl">
-        <div className="flex items-center gap-3 p-4 lg:px-6 h-16 border-b border-white/[0.06]">
+      <aside className="hidden md:flex flex-col w-20 lg:w-64 fixed inset-y-0 left-0 z-40 border-r border-border/50 bg-background/80 backdrop-blur-3xl">
+        <div className="flex items-center gap-3 p-4 lg:px-6 h-16 border-b border-border/50">
           <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/10">
             <Brain className="w-5 h-5 text-primary" />
           </div>
@@ -43,7 +43,7 @@ const AppLayout = () => {
                   "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200",
                   isActive
                     ? "bg-primary/10 text-primary shadow-sm shadow-primary/10 backdrop-blur-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )
               }
             >
@@ -52,7 +52,7 @@ const AppLayout = () => {
             </NavLink>
           ))}
         </nav>
-        <div className="p-3 border-t border-white/[0.06]">
+        <div className="p-3 border-t border-border/50">
           <button onClick={signOut}
             className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 w-full">
             <LogOut className="w-5 h-5 flex-shrink-0" />
@@ -65,8 +65,8 @@ const AppLayout = () => {
         <Outlet />
       </main>
 
-      {/* Mobile bottom nav - show first 5 + more */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-white/[0.06] bg-background/50 backdrop-blur-3xl">
+      {/* Mobile bottom nav */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border/50 bg-background/80 backdrop-blur-3xl">
         <div className="flex items-center justify-around h-16">
           {navItems.slice(0, 5).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.to === "/"}
@@ -75,7 +75,6 @@ const AppLayout = () => {
               <span className="text-[9px] font-medium">{item.label}</span>
             </NavLink>
           ))}
-          {/* More items */}
           {[navItems[7], navItems[8], navItems[9]].map((item) => (
             <NavLink key={item.to} to={item.to}
               className={({ isActive }) => cn("flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg transition-all duration-200", isActive ? "text-primary" : "text-muted-foreground")}>
