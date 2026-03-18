@@ -163,7 +163,7 @@ const Exam = () => {
 
   const finishExam = useCallback(() => {
     setTimerActive(false);
-    setMode("result");
+    setMode("scan");
     if (!user) return;
     const correctCount = userAnswers.filter((a, i) => a === questions[i]?.correctIndex).length;
     const xpEarned = correctCount * 10 + questions.length * 2;
