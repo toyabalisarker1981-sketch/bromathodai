@@ -223,8 +223,11 @@ const Community = () => {
 
   const handleAcceptRequest = async (requestId: string, fromUserId: string) => {
     if (!user) return;
-    await supabase.from("friend_requests").update({ status: "accepted" }).eq("id", requestId);
-    await supabase.from("friends").insert([{ user_id: user.id, friend_id: fromUserId }, { user_id: fromUserId, friend_id: user.id }]);
+    const { error: updateError } = await supabase.from("friend_requests").update({ status: "accepted" }).eq("id", requestId);
+    if (updateError) { toast({ title: "রিকোয়েস্ট আপডেট ব্যর্থ", variant: "destructive" }); return; }
+    // Only insert one row where user_id = current user (RLS allows this)
+    const { error: insertError } = await supabase.from("friends").insert({ user_id: user.id, friend_id: fromUserId });
+    if (insertError) { toast({ title: "বন্ধু যোগ ব্যর্থ", variant: "destructive" }); return; }
     toast({ title: "বন্ধু যোগ হয়েছে! 🎉" });
     fetchAll();
   };
