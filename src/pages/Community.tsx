@@ -601,53 +601,12 @@ const Community = () => {
             </div>
           )}
 
-          {/* Incoming Friend Requests */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold flex items-center gap-2"><UserPlus className="w-4 h-4 text-primary" /> প্রাপ্ত রিকোয়েস্ট ({pendingRequests.length})</h3>
-            {pendingRequests.length === 0 ? (
-              <p className="text-xs text-muted-foreground bg-muted/20 rounded-xl p-4 text-center">কোনো নতুন রিকোয়েস্ট নেই</p>
-            ) : (
-              pendingRequests.map(req => (
-                <div key={req.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/30">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center text-sm font-bold">
-                      {(req.profile?.full_name || "U")[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{req.profile?.full_name || "Unknown"}</p>
-                      <p className="text-xs text-muted-foreground">{req.profile?.email || `লেভেল ${req.profile?.level || 1}`}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <Button size="sm" className="rounded-lg gap-1 h-8" onClick={() => handleAcceptRequest(req.id, req.from_user_id)}><Check className="w-3 h-3" /> Accept</Button>
-                    <Button size="sm" variant="outline" className="rounded-lg h-8" onClick={() => handleRejectRequest(req.id)}><X className="w-3 h-3" /></Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          {/* Sent Requests */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold flex items-center gap-2"><Send className="w-4 h-4 text-muted-foreground" /> পাঠানো রিকোয়েস্ট ({sentRequests.length})</h3>
-            {sentRequests.length === 0 ? (
-              <p className="text-xs text-muted-foreground bg-muted/20 rounded-xl p-4 text-center">কোনো পাঠানো রিকোয়েস্ট নেই</p>
-            ) : (
-              sentRequests.map(req => (
-                <div key={req.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/30">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center text-sm font-bold">
-                      {(req.profile?.full_name || "U")[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{req.profile?.full_name || "Unknown"}</p>
-                      <p className="text-xs text-muted-foreground">পেন্ডিং...</p>
-                    </div>
-                  </div>
-                  <Button size="sm" variant="ghost" className="rounded-lg h-8 text-destructive" onClick={() => cancelSentRequest(req.id)}><X className="w-3 h-3" /> বাতিল</Button>
-                </div>
-              ))
-            )}
-          </div>
+          {pendingChallenges.filter(c => c.challenged_id === user?.id && c.status === "pending").length === 0 && (
+            <div className="text-center py-12">
+              <Swords className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">কোনো চ্যালেঞ্জ নেই</p>
+            </div>
+          )}
         </div>
       )}
 
