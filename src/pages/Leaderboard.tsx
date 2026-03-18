@@ -38,8 +38,7 @@ const Leaderboard = () => {
   const [loading, setLoading] = useState(true);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myProfile, setMyProfile] = useState<LeaderboardEntry | null>(null);
-  const [myClass, setMyClass] = useState<string>("all");
-  const [filterClass, setFilterClass] = useState<string>("all");
+  const [myClass, setMyClass] = useState<number | null>(null);
   const [selectedUser, setSelectedUser] = useState<LeaderboardEntry | null>(null);
   const [examCount, setExamCount] = useState(0);
 
