@@ -121,9 +121,24 @@ const SettingsPage = () => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({ full_name: fullName || null, student_class: studentClass ? parseInt(studentClass) : null, language }).eq("user_id", user.id);
-    if (error) toast({ title: "সেভ ব্যর্থ", description: error.message, variant: "destructive" });
-    else { setSaved(true); setEditing(false); toast({ title: "সেটিংস সেভ হয়েছে! ✅" }); setTimeout(() => setSaved(false), 2000); }
+    const updateData = { 
+      full_name: fullName || null, 
+      student_class: studentClass ? parseInt(studentClass) : null, 
+      language 
+    };
+    const { error } = await supabase.from("profiles").update(updateData).eq("user_id", user.id);
+    if (error) {
+      toast({ title: "সেভ ব্যর্থ", description: error.message, variant: "destructive" });
+    } else {
+      // Also update user metadata so it persists across sessions
+      await supabase.auth.updateUser({
+        data: { full_name: fullName, student_class: studentClass ? parseInt(studentClass) : null }
+      });
+      setSaved(true); 
+      setEditing(false); 
+      toast({ title: "সেটিংস সেভ হয়েছে! ✅" }); 
+      setTimeout(() => setSaved(false), 2000);
+    }
     setSaving(false);
   };
 
