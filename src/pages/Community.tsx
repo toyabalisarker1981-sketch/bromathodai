@@ -60,6 +60,12 @@ const Community = () => {
   const [groupMessages, setGroupMessages] = useState<GroupMessage[]>([]);
   const [newGroupMessage, setNewGroupMessage] = useState("");
   const [sendingGroupMessage, setSendingGroupMessage] = useState(false);
+  const [showGroupChallengeModal, setShowGroupChallengeModal] = useState(false);
+  const [groupChallengeSubject, setGroupChallengeSubject] = useState("");
+  const [groupChallengeTopic, setGroupChallengeTopic] = useState("");
+  const [groupChallengeCount, setGroupChallengeCount] = useState(10);
+  const [groupChallengeCustomContent, setGroupChallengeCustomContent] = useState("");
+  const [sendingGroupChallenge, setSendingGroupChallenge] = useState(false);
 
   // Challenge target (friend or group)
   const [challengeTargetFriend, setChallengeTargetFriend] = useState<FriendProfile | null>(null);
