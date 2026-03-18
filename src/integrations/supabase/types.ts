@@ -403,6 +403,33 @@ export type Database = {
         }
         Relationships: []
       }
+      notices: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          image_url: string
+          is_active: boolean
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          image_url: string
+          is_active?: boolean
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          title?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
