@@ -388,6 +388,53 @@ const Community = () => {
     setChallengeMode("result");
   };
 
+  // Group Challenge function - sends challenge to all group members
+  const sendGroupChallenge = async () => {
+    if (!user || !activeGroup || !groupChallengeSubject.trim()) return;
+    setSendingGroupChallenge(true);
+    try {
+      const members = groupMembers[activeGroup.id] || [];
+      const otherMembers = members.filter(m => m.user_id !== user.id);
+      if (otherMembers.length === 0) { toast({ title: "গ্রুপে অন্য সদস্য নেই!", variant: "destructive" }); setSendingGroupChallenge(false); return; }
+
+      const body: any = { subject: groupChallengeSubject, questionCount: groupChallengeCount, classLevel: "10" };
+      if (groupChallengeTopic) body.topic = groupChallengeTopic;
+      if (groupChallengeCustomContent.trim()) body.customContent = groupChallengeCustomContent.trim();
+
+      const resp = await fetch(GENERATE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) throw new Error("Failed");
+      const data = await resp.json();
+      if (!data.questions?.length) throw new Error("No questions");
+
+      // Create a challenge for each group member
+      const { data: myProfile } = await supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+      for (const member of otherMembers) {
+        await supabase.from("challenges").insert({
+          challenger_id: user.id,
+          challenged_id: member.user_id,
+          subject: groupChallengeSubject,
+          topic: groupChallengeTopic || null,
+          question_count: groupChallengeCount,
+          questions: data.questions,
+          status: "pending",
+        });
+        notifyGroupChallenge(myProfile?.full_name || "কেউ একজন", member.user_id, activeGroup.name, groupChallengeSubject);
+      }
+
+      toast({ title: `গ্রুপ চ্যালেঞ্জ পাঠানো হয়েছে! ⚔️🔥 (${otherMembers.length} জনকে)` });
+      setShowGroupChallengeModal(false);
+      setGroupChallengeSubject(""); setGroupChallengeTopic(""); setGroupChallengeCustomContent("");
+      fetchChallenges();
+    } catch (e) {
+      toast({ title: "চ্যালেঞ্জ পাঠানো ব্যর্থ", variant: "destructive" });
+    }
+    setSendingGroupChallenge(false);
+  };
+
   const canTakeChallenge = (c: Challenge) => {
     if (!user) return false;
     const isChallenger = c.challenger_id === user.id;
