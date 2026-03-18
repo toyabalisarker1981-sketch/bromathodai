@@ -24,8 +24,6 @@ const Community = () => {
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
   const [friends, setFriends] = useState<FriendProfile[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<(FriendRequest & { profile?: FriendProfile })[]>([]);
-  const [sentRequests, setSentRequests] = useState<(FriendRequest & { profile?: FriendProfile })[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [groupName, setGroupName] = useState("");
