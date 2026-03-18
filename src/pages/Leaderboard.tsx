@@ -86,15 +86,15 @@ const Leaderboard = () => {
     setExamCount(count || 0);
   };
 
-  const sendFriendRequest = async (toUserId: string) => {
+  const addFriendDirectly = async (toUserId: string) => {
     if (!user) return;
     const { data: existing } = await supabase.from("friends").select("id").or(`and(user_id.eq.${user.id},friend_id.eq.${toUserId}),and(user_id.eq.${toUserId},friend_id.eq.${user.id})`);
     if (existing && existing.length > 0) { toast({ title: "ইতোমধ্যে বন্ধু!" }); return; }
-    const { error } = await supabase.from("friend_requests").insert({ from_user_id: user.id, to_user_id: toUserId });
+    const { error } = await supabase.from("friends").insert({ user_id: user.id, friend_id: toUserId });
     if (error) {
-      toast({ title: "রিকোয়েস্ট পাঠানো ব্যর্থ", variant: "destructive" });
+      toast({ title: "বন্ধু যোগ ব্যর্থ", variant: "destructive" });
     } else {
-      toast({ title: "Friend Request পাঠানো হয়েছে! ✅" });
+      toast({ title: "বন্ধু যোগ হয়েছে! 🎉" });
     }
   };
 
