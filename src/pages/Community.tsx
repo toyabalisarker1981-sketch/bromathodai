@@ -13,7 +13,7 @@ interface FriendRequest { id: string; from_user_id: string; to_user_id: string; 
 interface Group { id: string; name: string; description: string | null; created_by: string; created_at: string; }
 interface Message { id: string; sender_id: string; receiver_id: string; content: string; created_at: string; read: boolean; }
 interface ChatPreview { friend: FriendProfile; lastMessage?: Message; unreadCount: number; }
-interface Challenge { id: string; challenger_id: string; challenged_id: string; subject: string; topic: string | null; question_count: number; status: string; challenger_score: number | null; challenged_score: number | null; created_at: string; }
+interface Challenge { id: string; challenger_id: string; challenged_id: string; subject: string; topic: string | null; question_count: number; questions: any; status: string; challenger_score: number | null; challenged_score: number | null; created_at: string; }
 
 const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quiz`;
 
