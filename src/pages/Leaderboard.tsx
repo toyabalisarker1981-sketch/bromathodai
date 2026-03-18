@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Medal, Star, Flame, Crown, TrendingUp, X, Mail, UserPlus, Sparkles } from "lucide-react";
+import { Trophy, Medal, Star, Flame, Crown, TrendingUp, X, Mail, UserPlus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
