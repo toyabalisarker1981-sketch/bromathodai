@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, ImagePlus, Bot, User, Sparkles, X, Loader2 } from "lucide-react";
+import { Send, ImagePlus, Bot, User, Sparkles, X, Loader2, Menu, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatMessageContent from "@/components/chat/ChatMessageContent";
+import ChatHistoryDrawer from "@/components/chat/ChatHistoryDrawer";
 import TextToSpeech from "@/components/chat/TextToSpeech";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,14 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   imageUrl?: string;
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+  messages: Message[];
+  created_at: string;
+  updated_at: string;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -27,8 +36,18 @@ const Chat = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getWelcomeMessage = useCallback((name: string): Message => ({
+    id: "1",
+    role: "assistant",
+    content: name
+      ? `আসসালামু আলাইকুম, **${name}**! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি পাঠিয়েও সমাধান নিতে পারো 📸\n\nসব কিছু **সম্পূর্ণ ফ্রি**! 🎓`
+      : "আসসালামু আলাইকুম! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি পাঠিয়েও সমাধান নিতে পারো 📸\n\nসব কিছু **সম্পূর্ণ ফ্রি**! 🎓",
+  }), []);
 
   useEffect(() => {
     if (!user) return;
@@ -41,19 +60,50 @@ const Chat = () => {
         if (data?.student_class) setStudentClass(data.student_class.toString());
         const name = data?.full_name || user.user_metadata?.full_name || "";
         setStudentName(name);
-        setMessages([{
-          id: "1",
-          role: "assistant",
-          content: name
-            ? `আসসালামু আলাইকুম, **${name}**! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি পাঠিয়েও সমাধান নিতে পারো 📸\n\nসব কিছু **সম্পূর্ণ ফ্রি**! 🎓`
-            : "আসসালামু আলাইকুম! 👋 আমি তোমার AI বন্ধু-টিউটর। গণিত, বিজ্ঞান, ইংরেজি — যেকোনো বিষয়ে প্রশ্ন করো! ছবি পাঠিয়েও সমাধান নিতে পারো 📸\n\nসব কিছু **সম্পূর্ণ ফ্রি**! 🎓",
-        }]);
+        setMessages([getWelcomeMessage(name)]);
       });
-  }, [user]);
+  }, [user, getWelcomeMessage]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  // Save conversation to DB after assistant responds
+  const saveConversation = useCallback(async (msgs: Message[]) => {
+    if (!user || msgs.length <= 1) return;
+    const userMsgs = msgs.filter(m => m.role === "user");
+    const title = userMsgs[0]?.content?.slice(0, 60) || "নতুন চ্যাট";
+    const saveMsgs = msgs.filter(m => m.id !== "1"); // exclude welcome
+
+    try {
+      if (currentConversationId) {
+        await supabase
+          .from("chat_conversations")
+          .update({ messages: saveMsgs as unknown as any, title })
+          .eq("id", currentConversationId);
+      } else {
+        const { data } = await supabase
+          .from("chat_conversations")
+          .insert({ user_id: user.id, title, messages: saveMsgs as unknown as any })
+          .select("id")
+          .single();
+        if (data) setCurrentConversationId(data.id);
+      }
+    } catch (e) {
+      console.error("Save conversation error:", e);
+    }
+  }, [user, currentConversationId]);
+
+  const handleNewChat = () => {
+    setCurrentConversationId(null);
+    setMessages([getWelcomeMessage(studentName)]);
+    setInput("");
+  };
+
+  const handleSelectConversation = (conv: Conversation) => {
+    setCurrentConversationId(conv.id);
+    setMessages([getWelcomeMessage(studentName), ...conv.messages]);
+  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -88,12 +138,11 @@ const Chat = () => {
     if ((!input.trim() && !selectedImage) || isStreaming) return;
 
     let imageUrl: string | undefined;
-
     if (selectedImage) {
       setUploadingImage(true);
       try {
         imageUrl = await uploadImage(selectedImage);
-      } catch (e) {
+      } catch {
         toast({ title: "ছবি আপলোড ব্যর্থ", variant: "destructive" });
         setUploadingImage(false);
         return;
@@ -116,7 +165,6 @@ const Chat = () => {
     let assistantContent = "";
 
     try {
-      // Build message content for API
       const apiMessages = newMessages.map((m) => {
         if (m.imageUrl) {
           return {
@@ -136,11 +184,7 @@ const Chat = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
-          messages: apiMessages,
-          studentClass,
-          studentName,
-        }),
+        body: JSON.stringify({ messages: apiMessages, studentClass, studentName }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -165,14 +209,11 @@ const Chat = () => {
         while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
           let line = textBuffer.slice(0, newlineIndex);
           textBuffer = textBuffer.slice(newlineIndex + 1);
-
           if (line.endsWith("\r")) line = line.slice(0, -1);
           if (line.startsWith(":") || line.trim() === "") continue;
           if (!line.startsWith("data: ")) continue;
-
           const jsonStr = line.slice(6).trim();
           if (jsonStr === "[DONE]") { streamDone = true; break; }
-
           try {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
@@ -187,6 +228,10 @@ const Chat = () => {
           }
         }
       }
+
+      // Save after stream completes
+      const finalMessages = [...newMessages, { id: assistantId, role: "assistant" as const, content: assistantContent }];
+      saveConversation(finalMessages);
     } catch (e) {
       console.error(e);
       setMessages((prev) => [...prev, {
@@ -201,16 +246,44 @@ const Chat = () => {
 
   return (
     <div className="flex flex-col h-screen md:h-screen">
+      {/* Header */}
       <div className="glass-card border-b border-border/50 p-4 flex items-center gap-3">
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className="w-9 h-9 rounded-xl bg-muted/30 flex items-center justify-center hover:bg-muted/50 transition-colors"
+        >
+          <Menu className="w-4 h-4 text-muted-foreground" />
+        </button>
         <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
           <Sparkles className="w-4 h-4 text-primary" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="font-display font-semibold text-sm">AI বন্ধু-টিউটর</h1>
           <p className="text-xs text-muted-foreground">তোমার পড়ালেখার সেরা বন্ধু — সম্পূর্ণ ফ্রি ✨</p>
         </div>
+        <button
+          onClick={handleNewChat}
+          className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center hover:bg-primary/25 transition-colors"
+          title="নতুন চ্যাট"
+        >
+          <Plus className="w-4 h-4 text-primary" />
+        </button>
       </div>
 
+      {/* Chat History Drawer */}
+      {user && (
+        <ChatHistoryDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          userId={user.id}
+          currentMessages={messages}
+          currentConversationId={currentConversationId}
+          onSelectConversation={handleSelectConversation}
+          onNewChat={handleNewChat}
+        />
+      )}
+
+      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hidden">
         <AnimatePresence>
           {messages.map((msg) => (
@@ -225,7 +298,7 @@ const Chat = () => {
                   <Bot className="w-4 h-4 text-primary" />
                 </div>
               )}
-              <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+              <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                 msg.role === "user"
                   ? "bg-primary text-primary-foreground rounded-br-md"
                   : "glass-card rounded-bl-md"
@@ -285,15 +358,10 @@ const Chat = () => {
         </div>
       )}
 
+      {/* Input */}
       <div className="p-4 glass-card border-t border-border/50">
         <div className="flex items-center gap-2 max-w-3xl mx-auto">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageSelect}
-            className="hidden"
-          />
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
           <Button
             variant="glass"
             size="icon"

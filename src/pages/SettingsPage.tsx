@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Settings, User, GraduationCap, Languages, Save, Check, Shield, LogOut, Mail, Edit3, HelpCircle, Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Settings, User, GraduationCap, Languages, Save, Check, Shield, LogOut, Mail, Edit3, HelpCircle, Info, ChevronDown, ChevronUp, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const userGuide = [
   {
@@ -97,6 +98,7 @@ const userGuide = [
 
 const SettingsPage = () => {
   const { user, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [studentClass, setStudentClass] = useState("");
@@ -198,6 +200,31 @@ const SettingsPage = () => {
           </Button>
         </>
       )}
+
+      {/* Theme Toggle */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="glass-card rounded-2xl p-5">
+        <h2 className="font-display font-semibold text-sm flex items-center gap-2 mb-3">
+          {theme === "dark" ? <Moon className="w-4 h-4 text-primary" /> : <Sun className="w-4 h-4 text-primary" />} থিম
+        </h2>
+        <div className="flex gap-2">
+          {[
+            { val: "light" as const, label: "লাইট ☀️", icon: Sun },
+            { val: "dark" as const, label: "ডার্ক 🌙", icon: Moon },
+          ].map((t) => (
+            <button
+              key={t.val}
+              onClick={() => setTheme(t.val)}
+              className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                theme === t.val
+                  ? "bg-primary/15 text-primary border border-primary/30"
+                  : "bg-muted/30 text-muted-foreground border border-transparent"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </motion.div>
 
       {/* User Guide */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>

@@ -6,6 +6,64 @@
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 224 30% 12%;
+
+    --card: 0 0% 97%;
+    --card-foreground: 224 30% 12%;
+
+    --popover: 0 0% 97%;
+    --popover-foreground: 224 30% 12%;
+
+    --primary: 155 60% 38%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 235 55% 55%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 14% 92%;
+    --muted-foreground: 215 15% 45%;
+
+    --accent: 235 55% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 87%;
+    --input: 220 13% 87%;
+    --ring: 155 60% 38%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --gradient-emerald: linear-gradient(135deg, hsl(155 60% 38%), hsl(165 70% 30%));
+    --gradient-indigo: linear-gradient(135deg, hsl(235 55% 55%), hsl(260 60% 50%));
+    --gradient-hero: linear-gradient(135deg, hsl(155 60% 38%), hsl(235 55% 55%));
+    --gradient-glass: linear-gradient(135deg, hsla(155 60% 38% / 0.06), hsla(235 55% 55% / 0.06));
+    --gradient-glow: radial-gradient(ellipse at 50% 0%, hsla(155 60% 38% / 0.1), transparent 60%);
+
+    --glass-bg: hsla(0, 0%, 100%, 0.7);
+    --glass-border: hsla(220, 13%, 87%, 0.6);
+    --glass-shadow: 0 8px 32px hsla(0, 0%, 0%, 0.06);
+
+    --shadow-glow-emerald: 0 0 30px -5px hsla(155, 60%, 38%, 0.2);
+    --shadow-glow-indigo: 0 0 30px -5px hsla(235, 55%, 55%, 0.2);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 224 30% 12%;
+    --sidebar-primary: 155 60% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 92%;
+    --sidebar-accent-foreground: 224 30% 12%;
+    --sidebar-border: 220 13% 87%;
+    --sidebar-ring: 155 60% 38%;
+
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+  }
+
+  .dark {
     --background: 224 30% 6%;
     --foreground: 210 20% 92%;
 
@@ -34,9 +92,6 @@
     --input: 224 20% 16%;
     --ring: 155 60% 45%;
 
-    --radius: 0.75rem;
-
-    /* Custom tokens */
     --gradient-emerald: linear-gradient(135deg, hsl(155 60% 45%), hsl(165 70% 35%));
     --gradient-indigo: linear-gradient(135deg, hsl(235 55% 55%), hsl(260 60% 50%));
     --gradient-hero: linear-gradient(135deg, hsl(155 60% 45%), hsl(235 55% 55%));
@@ -58,9 +113,6 @@
     --sidebar-accent-foreground: 210 20% 92%;
     --sidebar-border: 224 20% 16%;
     --sidebar-ring: 155 60% 45%;
-
-    --font-display: 'Space Grotesk', sans-serif;
-    --font-body: 'Inter', sans-serif;
   }
 }
 
@@ -111,6 +163,19 @@
       0 8px 32px hsla(0, 0%, 0%, 0.25),
       inset 0 1px 0 hsla(210, 20%, 92%, 0.06),
       inset 0 -1px 0 hsla(0, 0%, 0%, 0.1);
+  }
+
+  :root .liquid-glass {
+    background: linear-gradient(
+      135deg,
+      hsla(0, 0%, 100%, 0.75),
+      hsla(220, 14%, 96%, 0.65)
+    );
+    border: 1px solid hsla(220, 13%, 87%, 0.5);
+    box-shadow:
+      0 8px 32px hsla(0, 0%, 0%, 0.06),
+      inset 0 1px 0 hsla(0, 0%, 100%, 0.8),
+      inset 0 -1px 0 hsla(0, 0%, 0%, 0.03);
   }
 
   .liquid-glass-glow {
