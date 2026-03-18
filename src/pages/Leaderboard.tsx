@@ -149,10 +149,8 @@ const Leaderboard = () => {
         ) : entries.length === 0 ? (
           <div className="glass-card rounded-2xl p-8 text-center">
             <Trophy className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">
-              {filterClass === "all" ? "এখনো কোনো স্টুডেন্ট নেই" : `ক্লাস ${filterClass} তে এখনো কোনো স্টুডেন্ট নেই`}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">অন্য ক্লাস দেখতে উপরের ফিল্টার ব্যবহার করো</p>
+            <p className="text-sm text-muted-foreground">ক্লাস {myClass} তে এখনো কোনো স্টুডেন্ট নেই</p>
+            <p className="text-xs text-muted-foreground mt-1">কুইজ বা পরীক্ষা দিয়ে XP অর্জন করো!</p>
           </div>
         ) : (
           entries.map((entry, i) => {
