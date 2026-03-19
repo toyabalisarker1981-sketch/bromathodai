@@ -56,7 +56,6 @@ const Exam = () => {
     setMode("omr");
     toast({ title: `${title} — ${examQuestions.length}টি প্রশ্ন 📝` });
   };
-  }, [user]);
 
   // Timer
   useEffect(() => {
