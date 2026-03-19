@@ -108,7 +108,7 @@ ${topic ? `অধ্যায়/টপিক: ${topic}` : ""}
 কন্টেন্ট:
 ${enrichedContent}
 
-এই কন্টেন্ট থেকে ${count}টি MCQ${shortCount > 0 ? `, ${shortCount}টি সংক্ষিপ্ত প্রশ্ন` : ""}${analyticalCount > 0 ? ` এবং ${analyticalCount}টি বিশ্লেষণমূলক/সৃজনশীল প্রশ্ন` : ""} তৈরি করো।`;
+এই কন্টেন্ট থেকে ${mcqCount > 0 ? `${mcqCount}টি MCQ` : ""}${mcqCount > 0 && shortCount > 0 ? ", " : ""}${shortCount > 0 ? `${shortCount}টি সংক্ষিপ্ত প্রশ্ন (SQ)` : ""}${(mcqCount > 0 || shortCount > 0) && analyticalCount > 0 ? " এবং " : ""}${analyticalCount > 0 ? `${analyticalCount}টি সৃজনশীল প্রশ্ন (CQ)` : ""} তৈরি করো।`;
     } else {
       prompt = `${strictRules}
 
