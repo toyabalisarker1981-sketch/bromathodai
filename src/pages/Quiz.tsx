@@ -110,18 +110,28 @@ const Quiz = () => {
       if (!resp.ok) throw new Error("Failed to generate quiz");
       const data = await resp.json();
 
-      if (data.questions && data.questions.length > 0) {
-        setQuestions(data.questions);
-        setShortQuestions(data.shortQuestions || []);
-        setAnalyticalQuestions(data.analyticalQuestions || []);
-        setAnswers(new Array(data.questions.length).fill(null));
+      const mcqs = data.questions || [];
+      const sqs = data.shortQuestions || [];
+      const cqs = data.analyticalQuestions || [];
+      const totalQ = mcqs.length + sqs.length + cqs.length;
+
+      if (totalQ > 0) {
+        setQuestions(mcqs);
+        setShortQuestions(sqs);
+        setAnalyticalQuestions(cqs);
+        setAnswers(new Array(mcqs.length).fill(null));
         setCurrentQ(0);
         setSelected(null);
         setShowExplanation(false);
         setShowShortAnswer({});
         setShowAnalyticalGuide({});
-        setMode("quiz");
-        const totalQ = data.questions.length + (data.shortQuestions?.length || 0) + (data.analyticalQuestions?.length || 0);
+        // If no MCQ, go straight to result to show SQ/CQ
+        if (mcqs.length > 0) {
+          setMode("quiz");
+        } else {
+          setMode("result");
+          setResultTab(sqs.length > 0 ? "short" : "analytical");
+        }
         toast({ title: `${totalQ}টি প্রশ্ন প্রস্তুত! 🎯` });
       } else {
         throw new Error("No questions generated");
