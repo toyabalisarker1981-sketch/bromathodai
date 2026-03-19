@@ -698,6 +698,8 @@ const Community = () => {
           sending={sendingGroupChallenge}
           onSend={sendGroupChallenge}
           isGroup
+          questionType={groupChallengeQuestionType}
+          setQuestionType={setGroupChallengeQuestionType}
         />
       </div>
     );
