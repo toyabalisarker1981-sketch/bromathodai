@@ -555,6 +555,8 @@ const Exam = () => {
           </div>
         </div>
 
+        <QuestionTypeSelector value={examQuestionType} onChange={setExamQuestionType} />
+
         <div>
           <label className="text-xs text-muted-foreground mb-1.5 block">পরীক্ষার সময় (মিনিট)</label>
           <input type="number" min="5" max="180" value={duration} onChange={(e) => setDuration(parseInt(e.target.value) || 30)}
