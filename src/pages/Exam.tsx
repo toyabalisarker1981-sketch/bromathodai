@@ -487,6 +487,15 @@ const Exam = () => {
     );
   }
 
+  // Custom exam modes
+  if (mode === "custom_exam_create") {
+    return <CustomExamCreator onBack={() => setMode("setup")} examType="exam" />;
+  }
+
+  if (mode === "custom_exam_list") {
+    return <CustomExamList onBack={() => setMode("setup")} onStartExam={handleStartCustomExam} examType="exam" />;
+  }
+
   // Setup
   return (
     <div className="p-4 lg:p-8 max-w-3xl mx-auto space-y-6">
@@ -495,7 +504,30 @@ const Exam = () => {
         <p className="text-sm text-muted-foreground mt-1">OMR স্টাইল MCQ পরীক্ষা দাও — AI প্রশ্ন তৈরি করবে 🎯</p>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-5 space-y-4">
+      {/* Custom exam card */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+        onClick={() => setMode("custom_exam_list")}
+        className="glass-card-hover rounded-2xl p-5 cursor-pointer space-y-2">
+        <h3 className="font-display font-semibold text-base flex items-center gap-2">📋 কাস্টম পরীক্ষা</h3>
+        <p className="text-xs text-muted-foreground">অ্যাডমিনের তৈরি পরীক্ষায় অংশগ্রহণ করো</p>
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">MCQ</span>
+          <span className="text-[10px] bg-accent/30 text-foreground px-2 py-0.5 rounded-full">অ্যাডমিন</span>
+        </div>
+        <Button variant="ghost" size="sm" className="gap-1.5 text-primary"><Play className="w-3.5 h-3.5" /> পরীক্ষা দাও</Button>
+      </motion.div>
+
+      {/* Admin create button */}
+      {isAdmin && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Button variant="outline" className="w-full rounded-xl gap-2 border-dashed border-2" onClick={() => setMode("custom_exam_create")}>
+            <Shield className="w-4 h-4" /> অ্যাডমিন: নতুন কাস্টম পরীক্ষা তৈরি করো
+          </Button>
+        </motion.div>
+      )}
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="glass-card rounded-2xl p-5 space-y-4">
+        <h3 className="font-display font-semibold text-sm text-muted-foreground">🤖 AI পরীক্ষা তৈরি করো</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-xs text-muted-foreground mb-1.5 block">বিষয়ের নাম *</label>
@@ -527,7 +559,6 @@ const Exam = () => {
             className="w-full bg-muted/30 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground" />
         </div>
 
-        {/* Source type */}
         <div>
           <label className="text-xs text-muted-foreground mb-1.5 block">প্রশ্নের সোর্স</label>
           <div className="flex gap-2">
