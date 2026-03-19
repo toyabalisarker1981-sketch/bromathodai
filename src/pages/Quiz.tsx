@@ -54,6 +54,8 @@ const Quiz = () => {
   const [resultTab, setResultTab] = useState<ResultTab>("mcq");
   const [showShortAnswer, setShowShortAnswer] = useState<Record<number, boolean>>({});
   const [showAnalyticalGuide, setShowAnalyticalGuide] = useState<Record<number, boolean>>({});
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [customExamTitle, setCustomExamTitle] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
