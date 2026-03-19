@@ -194,7 +194,20 @@ const Exam = () => {
             messages: [{
               role: "user",
               content: [
-                { type: "text", text: `এটি একটি OMR শীটের ছবি। এখানে ${questions.length}টি প্রশ্নের উত্তর দাগানো আছে। প্রতিটি প্রশ্নের জন্য কোন অপশন (ক=0, খ=1, গ=2, ঘ=3) দাগানো হয়েছে বলো। শুধুমাত্র JSON array হিসেবে উত্তর দাও, যেমন: [0, 1, 2, 3, 0, ...]. যদি কোনো প্রশ্নের উত্তর দাগানো না থাকে, null দাও।` },
+                { type: "text", text: `তুমি একজন OMR শীট স্ক্যানার। এই ছবিটি একটি OMR শীট যেখানে ${questions.length}টি প্রশ্নের উত্তর বৃত্ত পূরণ করে দাগানো আছে।
+
+⚠️ অত্যন্ত গুরুত্বপূর্ণ নিয়ম:
+1. প্রতিটি প্রশ্নের জন্য ৪টি বৃত্ত আছে: ক(0), খ(1), গ(2), ঘ(3)
+2. যে বৃত্তটি কালো/গাঢ় কালি দিয়ে পূরণ করা হয়েছে সেটিই উত্তর
+3. পূরণ না করা বৃত্ত ফাঁকা/সাদা থাকে — সেগুলো উত্তর নয়
+4. একটি প্রশ্নে শুধু একটিই বৃত্ত পূরণ থাকবে
+5. যদি কোনো প্রশ্নে কোনো বৃত্ত পূরণ না থাকে, null দাও
+6. OMR শীটে 2-কলামে প্রশ্ন থাকতে পারে — বাম কলামে 1 থেকে শুরু, ডান কলামে পরের অর্ধেক
+
+খুব সাবধানে প্রতিটি সারি দেখো এবং সঠিকভাবে শনাক্ত করো কোন বৃত্ত পূরণ করা হয়েছে।
+
+শুধুমাত্র একটি JSON array দাও, যেমন: [0, 1, 2, 3, 0, null, ...] 
+মোট ${questions.length}টি উত্তর দিতে হবে। অতিরিক্ত কোনো টেক্সট লিখবে না।` },
                 { type: "image_url", image_url: { url: `data:image/${file.type.split("/")[1]};base64,${base64}` } },
               ],
             }],
@@ -208,17 +221,29 @@ const Exam = () => {
               try { const p = JSON.parse(line.slice(6)); const c = p.choices?.[0]?.delta?.content; if (c) fullContent += c; } catch {}
             }
           }
-          const arrMatch = fullContent.match(/\[[\s\S]*?\]/);
+          // Try to extract the JSON array more robustly
+          const cleanContent = fullContent.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+          const arrMatch = cleanContent.match(/\[[\s\S]*\]/);
           if (arrMatch) {
-            const scannedAnswers = JSON.parse(arrMatch[0]);
-            setUserAnswers(scannedAnswers.slice(0, questions.length));
-            toast({ title: "OMR স্ক্যান সম্পন্ন! ✅" });
-            setMode("result");
-            setScanning(false);
-            return;
+            try {
+              const scannedAnswers = JSON.parse(arrMatch[0]);
+              // Validate and sanitize: ensure values are 0-3 or null
+              const sanitized = scannedAnswers.slice(0, questions.length).map((a: any) => {
+                if (a === null || a === undefined || a === "null") return null;
+                const num = typeof a === "number" ? a : parseInt(a);
+                return (num >= 0 && num <= 3) ? num : null;
+              });
+              setUserAnswers(sanitized);
+              toast({ title: "OMR স্ক্যান সম্পন্ন! ✅", description: `${sanitized.filter((a: any) => a !== null).length}টি উত্তর শনাক্ত হয়েছে` });
+              setMode("result");
+              setScanning(false);
+              return;
+            } catch (parseErr) {
+              console.error("OMR parse error:", parseErr);
+            }
           }
         }
-        toast({ title: "OMR স্ক্যান ব্যর্থ", description: "ম্যানুয়ালি উত্তর দাও", variant: "destructive" });
+        toast({ title: "OMR স্ক্যান ব্যর্থ", description: "ম্যানুয়ালি উত্তর দাও বা আবার চেষ্টা করো", variant: "destructive" });
         setScanning(false);
         setMode("scan");
       };
