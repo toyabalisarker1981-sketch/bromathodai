@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Target, Play, CheckCircle2, XCircle, Loader2, Upload, Youtube, Globe, FileText, Image, ArrowLeft, Sparkles, BookOpen, Lightbulb, HelpCircle } from "lucide-react";
+import { Brain, Target, Play, CheckCircle2, XCircle, Loader2, Upload, Youtube, Globe, FileText, Image, ArrowLeft, Sparkles, BookOpen, Lightbulb, HelpCircle, ClipboardList, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import ChatMessageContent from "@/components/chat/ChatMessageContent";
 import { updateXpAndStreak, saveExamResult } from "@/lib/xpHelper";
+import CustomExamCreator from "@/components/custom-exam/CustomExamCreator";
+import CustomExamList from "@/components/custom-exam/CustomExamList";
 
 interface QuizQuestion {
   question: string;
