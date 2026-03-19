@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, UserPlus, Search, X, Crown, Plus, Swords, Loader2, Mail, MessageCircle, Send, ArrowLeft, Trash2, Trophy, FileText, Link, Image } from "lucide-react";
+import QuestionTypeSelector, { type QuestionType } from "@/components/QuestionTypeSelector";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
