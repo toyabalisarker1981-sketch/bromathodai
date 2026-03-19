@@ -57,6 +57,7 @@ const Quiz = () => {
   const [showAnalyticalGuide, setShowAnalyticalGuide] = useState<Record<number, boolean>>({});
   const [isAdmin, setIsAdmin] = useState(false);
   const [customExamTitle, setCustomExamTitle] = useState("");
+  const [questionType, setQuestionType] = useState<QuestionType>("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
