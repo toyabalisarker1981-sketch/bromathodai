@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ClipboardList, ArrowLeft, Sparkles, Loader2, Upload, Youtube, Globe, FileText, Image, Printer, Camera, CheckCircle2, XCircle, Target, Clock, Timer, ChevronLeft, ChevronRight } from "lucide-react";
+import { ClipboardList, ArrowLeft, Sparkles, Loader2, Upload, Youtube, Globe, FileText, Image, Printer, Camera, CheckCircle2, XCircle, Target, Clock, Timer, ChevronLeft, ChevronRight, Shield, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { updateXpAndStreak, saveExamResult } from "@/lib/xpHelper";
+import CustomExamCreator from "@/components/custom-exam/CustomExamCreator";
+import CustomExamList from "@/components/custom-exam/CustomExamList";
+
 interface ExamQuestion {
   question: string;
   options: string[];
@@ -15,7 +18,7 @@ interface ExamQuestion {
 
 const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quiz`;
 
-type ExamMode = "setup" | "generating" | "omr" | "exam" | "scan" | "result";
+type ExamMode = "setup" | "generating" | "omr" | "exam" | "scan" | "result" | "custom_exam_list" | "custom_exam_create";
 
 const Exam = () => {
   const { user } = useAuth();
