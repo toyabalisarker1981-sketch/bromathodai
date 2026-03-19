@@ -301,7 +301,7 @@ const Community = () => {
     if (!user || !challengeTargetFriend || !challengeSubject.trim()) return;
     setSendingChallenge(true);
     try {
-      const body: any = { subject: challengeSubject, questionCount: challengeCount, classLevel: challengeTargetFriend.student_class?.toString() || "10" };
+      const body: any = { subject: challengeSubject, questionCount: challengeCount, classLevel: challengeTargetFriend.student_class?.toString() || "10", questionType: challengeQuestionType, includeShortQuestions: challengeQuestionType === "sq" || challengeQuestionType === "all", includeAnalytical: challengeQuestionType === "cq" || challengeQuestionType === "all" };
       if (challengeTopic) body.topic = challengeTopic;
       if (challengeCustomContent.trim()) body.customContent = challengeCustomContent.trim();
 
