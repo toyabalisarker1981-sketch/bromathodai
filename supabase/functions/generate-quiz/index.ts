@@ -49,8 +49,9 @@ serve(async (req) => {
     const wantShort = (qType === "sq" || qType === "all") && includeShortQuestions !== false;
     const wantAnalytical = (qType === "cq" || qType === "all") && includeAnalytical !== false;
 
-    const shortCount = wantShort ? Math.max(2, Math.ceil(count * 0.4)) : 0;
-    const analyticalCount = wantAnalytical ? Math.max(1, Math.ceil(count * 0.2)) : 0;
+    const mcqCount = wantMCQ ? count : 0;
+    const shortCount = wantShort ? (qType === "sq" ? count : Math.max(2, Math.ceil(count * 0.4))) : 0;
+    const analyticalCount = wantAnalytical ? (qType === "cq" ? Math.max(3, Math.ceil(count * 0.5)) : Math.max(1, Math.ceil(count * 0.2))) : 0;
 
     const strictRules = `
 তুমি একজন অত্যন্ত কঠোর ও নির্ভুল পরীক্ষার প্রশ্ন প্রণেতা।
