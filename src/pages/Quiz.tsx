@@ -101,8 +101,9 @@ const Quiz = () => {
           topic: topicInput,
           customContent,
           questionCount: qCount,
-          includeShortQuestions: true,
-          includeAnalytical: true,
+          questionType,
+          includeShortQuestions: questionType === "sq" || questionType === "all",
+          includeAnalytical: questionType === "cq" || questionType === "all",
         }),
       });
 
