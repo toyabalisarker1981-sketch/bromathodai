@@ -106,7 +106,9 @@ const Exam = () => {
         questionCount,
         subject: subjectInput,
         topic: topicInput,
-        customContent: `ফাইলের নাম: ${file.name}. এই বিষয় থেকে বোর্ড স্ট্যান্ডার্ড MCQ প্রশ্ন তৈরি করো। Cover page, Index, Page number, Author info উপেক্ষা করো।`,
+        customContent: `ফাইলের নাম: ${file.name}. ফাইলের ধরন: ${file.type}. এই ফাইলের বিষয়বস্তু গভীরভাবে বিশ্লেষণ করে বোর্ড পরীক্ষার মানের MCQ তৈরি করো। Cover page, Index, Page number, Author info সম্পূর্ণ উপেক্ষা করো — শুধুমাত্র মূল পাঠ্য বিষয়বস্তু থেকে প্রশ্ন করো।`,
+        includeShortQuestions: false,
+        includeAnalytical: false,
       };
       const resp = await fetch(GENERATE_URL, {
         method: "POST",
