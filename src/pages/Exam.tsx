@@ -36,6 +36,7 @@ const Exam = () => {
   const [scanning, setScanning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,6 +44,18 @@ const Exam = () => {
     if (!user) return;
     supabase.from("profiles").select("student_class").eq("user_id", user.id).single()
       .then(({ data }) => { if (data?.student_class) setStudentClass(data.student_class.toString()); });
+    supabase.from("user_roles").select("role").eq("user_id", user.id)
+      .then(({ data }) => { if (data?.some(r => r.role === "admin")) setIsAdmin(true); });
+  }, [user]);
+
+  const handleStartCustomExam = (examQuestions: any[], title: string, subject: string, dur: number) => {
+    setQuestions(examQuestions);
+    setUserAnswers(new Array(examQuestions.length).fill(null));
+    setSubjectInput(subject);
+    setDuration(dur);
+    setMode("omr");
+    toast({ title: `${title} — ${examQuestions.length}টি প্রশ্ন 📝` });
+  };
   }, [user]);
 
   // Timer
