@@ -142,9 +142,12 @@ ${analyticalCount > 0 ? `বিশ্লেষণমূলক/সৃজনশী
 - নির্দেশনা/গাইডলাইন (কীভাবে উত্তর লিখতে হবে)
 - মূল পয়েন্টগুলো যা উত্তরে থাকা উচিত` : ""}`;
 
-    // Build tools with conditional short/analytical question schemas
-    const toolProperties: Record<string, any> = {
-      questions: {
+    // Build tools with conditional question type schemas
+    const toolProperties: Record<string, any> = {};
+    const requiredFields: string[] = [];
+
+    if (wantMCQ) {
+      toolProperties.questions = {
         type: "array",
         description: "MCQ questions",
         items: {
@@ -158,10 +161,9 @@ ${analyticalCount > 0 ? `বিশ্লেষণমূলক/সৃজনশী
           required: ["question", "options", "correctIndex", "explanation"],
           additionalProperties: false,
         },
-      },
-    };
-
-    const requiredFields = ["questions"];
+      };
+      requiredFields.push("questions");
+    }
 
     if (shortCount > 0) {
       toolProperties.shortQuestions = {
