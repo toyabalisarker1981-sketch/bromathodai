@@ -38,6 +38,7 @@ const Exam = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [examQuestionType, setExamQuestionType] = useState<QuestionType>("mcq");
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
