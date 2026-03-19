@@ -70,8 +70,10 @@ const Exam = () => {
     try {
       const body: any = { classLevel: studentClass, questionCount, subject: subjectInput, topic: topicInput };
       if (sourceType === "url" && sourceUrl.trim()) {
-        body.customContent = `এই URL/কন্টেন্ট ভালোভাবে পড়ো এবং শুধুমাত্র এই কন্টেন্ট থেকে প্রশ্ন তৈরি করো। Cover page, Index, Page number, Author info উপেক্ষা করো। শুধুমাত্র মূল পড়ার অংশ থেকে বোর্ড স্ট্যান্ডার্ড প্রশ্ন তৈরি করো: ${sourceUrl}`;
+        body.customContent = `এই URL/কন্টেন্ট সম্পূর্ণ পড়ো এবং গভীরভাবে বিশ্লেষণ করো। প্রতিটি অনুচ্ছেদ, সংজ্ঞা, সূত্র, তথ্য চিহ্নিত করো। শুধুমাত্র মূল পাঠ্য বিষয়বস্তু থেকে বোর্ড পরীক্ষার মানের MCQ তৈরি করো। Cover page, Index, Page number, Author info সম্পূর্ণ উপেক্ষা করো: ${sourceUrl}`;
       }
+      body.includeShortQuestions = false;
+      body.includeAnalytical = false;
       const resp = await fetch(GENERATE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
