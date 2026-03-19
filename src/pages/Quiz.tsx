@@ -30,7 +30,7 @@ interface AnalyticalQuestion {
 
 const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quiz`;
 
-type QuizMode = "select" | "subject" | "custom" | "generating" | "quiz" | "result";
+type QuizMode = "select" | "subject" | "custom" | "generating" | "quiz" | "result" | "custom_exam_list" | "custom_exam_create" | "custom_exam_play";
 type ResultTab = "mcq" | "short" | "analytical";
 
 const Quiz = () => {
