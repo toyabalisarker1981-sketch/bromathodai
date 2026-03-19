@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { updateXpAndStreak, saveExamResult } from "@/lib/xpHelper";
 import CustomExamCreator from "@/components/custom-exam/CustomExamCreator";
 import CustomExamList from "@/components/custom-exam/CustomExamList";
+import QuestionTypeSelector, { type QuestionType } from "@/components/QuestionTypeSelector";
 
 interface ExamQuestion {
   question: string;
