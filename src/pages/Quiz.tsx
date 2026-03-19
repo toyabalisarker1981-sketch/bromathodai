@@ -30,8 +30,9 @@ interface AnalyticalQuestion {
 
 const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quiz`;
 
-type QuizMode = "select" | "subject" | "custom" | "generating" | "quiz" | "result" | "custom_exam_list" | "custom_exam_create" | "custom_exam_play";
+type QuizMode = "select" | "subject" | "custom" | "generating" | "quiz" | "result" | "custom_exam_list" | "custom_exam_create" | "custom_exam_play" | "sq_mode" | "cq_mode";
 type ResultTab = "mcq" | "short" | "analytical";
+type QuestionType = "mcq" | "sq" | "cq" | "all";
 
 const Quiz = () => {
   const { user } = useAuth();
