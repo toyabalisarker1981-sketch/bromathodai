@@ -62,7 +62,23 @@ const Quiz = () => {
     if (!user) return;
     supabase.from("profiles").select("student_class").eq("user_id", user.id).single()
       .then(({ data }) => { if (data?.student_class) setStudentClass(data.student_class.toString()); });
+    supabase.from("user_roles").select("role").eq("user_id", user.id)
+      .then(({ data }) => { if (data?.some(r => r.role === "admin")) setIsAdmin(true); });
   }, [user]);
+
+  const handleStartCustomExam = (examQuestions: any[], title: string, subject: string, duration: number) => {
+    setQuestions(examQuestions);
+    setShortQuestions([]);
+    setAnalyticalQuestions([]);
+    setAnswers(new Array(examQuestions.length).fill(null));
+    setCurrentQ(0);
+    setSelected(null);
+    setShowExplanation(false);
+    setCustomExamTitle(title);
+    setSubjectInput(subject);
+    setMode("quiz");
+    toast({ title: `${title} — ${examQuestions.length}টি প্রশ্ন 🎯` });
+  };
 
   const generateQuiz = async (customContent?: string, count?: number) => {
     setGenerating(true);
