@@ -400,7 +400,7 @@ const Community = () => {
       const otherMembers = members.filter(m => m.user_id !== user.id);
       if (otherMembers.length === 0) { toast({ title: "গ্রুপে অন্য সদস্য নেই!", variant: "destructive" }); setSendingGroupChallenge(false); return; }
 
-      const body: any = { subject: groupChallengeSubject, questionCount: groupChallengeCount, classLevel: "10" };
+      const body: any = { subject: groupChallengeSubject, questionCount: groupChallengeCount, classLevel: "10", questionType: groupChallengeQuestionType, includeShortQuestions: groupChallengeQuestionType === "sq" || groupChallengeQuestionType === "all", includeAnalytical: groupChallengeQuestionType === "cq" || groupChallengeQuestionType === "all" };
       if (groupChallengeTopic) body.topic = groupChallengeTopic;
       if (groupChallengeCustomContent.trim()) body.customContent = groupChallengeCustomContent.trim();
 
