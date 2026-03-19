@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Target, Play, CheckCircle2, XCircle, Loader2, Upload, Youtube, Globe, FileText, Image, ArrowLeft, Sparkles, BookOpen, Lightbulb, HelpCircle } from "lucide-react";
+import { Brain, Target, Play, CheckCircle2, XCircle, Loader2, Upload, Youtube, Globe, FileText, Image, ArrowLeft, Sparkles, BookOpen, Lightbulb, HelpCircle, ClipboardList, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import ChatMessageContent from "@/components/chat/ChatMessageContent";
 import { updateXpAndStreak, saveExamResult } from "@/lib/xpHelper";
+import CustomExamCreator from "@/components/custom-exam/CustomExamCreator";
+import CustomExamList from "@/components/custom-exam/CustomExamList";
 
 interface QuizQuestion {
   question: string;
@@ -28,7 +30,7 @@ interface AnalyticalQuestion {
 
 const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quiz`;
 
-type QuizMode = "select" | "subject" | "custom" | "generating" | "quiz" | "result";
+type QuizMode = "select" | "subject" | "custom" | "generating" | "quiz" | "result" | "custom_exam_list" | "custom_exam_create" | "custom_exam_play";
 type ResultTab = "mcq" | "short" | "analytical";
 
 const Quiz = () => {
@@ -52,13 +54,31 @@ const Quiz = () => {
   const [resultTab, setResultTab] = useState<ResultTab>("mcq");
   const [showShortAnswer, setShowShortAnswer] = useState<Record<number, boolean>>({});
   const [showAnalyticalGuide, setShowAnalyticalGuide] = useState<Record<number, boolean>>({});
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [customExamTitle, setCustomExamTitle] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("student_class").eq("user_id", user.id).single()
       .then(({ data }) => { if (data?.student_class) setStudentClass(data.student_class.toString()); });
+    supabase.from("user_roles").select("role").eq("user_id", user.id)
+      .then(({ data }) => { if (data?.some(r => r.role === "admin")) setIsAdmin(true); });
   }, [user]);
+
+  const handleStartCustomExam = (examQuestions: any[], title: string, subject: string, duration: number) => {
+    setQuestions(examQuestions);
+    setShortQuestions([]);
+    setAnalyticalQuestions([]);
+    setAnswers(new Array(examQuestions.length).fill(null));
+    setCurrentQ(0);
+    setSelected(null);
+    setShowExplanation(false);
+    setCustomExamTitle(title);
+    setSubjectInput(subject);
+    setMode("quiz");
+    toast({ title: `${title} — ${examQuestions.length}টি প্রশ্ন 🎯` });
+  };
 
   const generateQuiz = async (customContent?: string, count?: number) => {
     setGenerating(true);
@@ -521,6 +541,15 @@ const Quiz = () => {
     );
   }
 
+  // Custom exam modes
+  if (mode === "custom_exam_create") {
+    return <CustomExamCreator onBack={() => setMode("select")} examType="quiz" />;
+  }
+
+  if (mode === "custom_exam_list") {
+    return <CustomExamList onBack={() => setMode("select")} onStartExam={handleStartCustomExam} examType="quiz" />;
+  }
+
   // Main selection screen
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto space-y-6">
@@ -533,8 +562,9 @@ const Quiz = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
-          { title: "📚 NCTB বিষয়ভিত্তিক কুইজ", desc: "বিষয় ও অধ্যায়ের নাম দিয়ে বোর্ড মানের প্রশ্ন জেনারেট করো", action: () => setMode("subject"), color: "primary" },
-          { title: "📎 কাস্টম সোর্স থেকে কুইজ", desc: "PDF, ছবি, YouTube বা ওয়েবসাইট বিশ্লেষণ করে প্রশ্ন তৈরি", action: () => setMode("custom"), color: "secondary" },
+          { title: "📚 NCTB বিষয়ভিত্তিক কুইজ", desc: "বিষয় ও অধ্যায়ের নাম দিয়ে বোর্ড মানের প্রশ্ন জেনারেট করো", action: () => setMode("subject") },
+          { title: "📎 কাস্টম সোর্স থেকে কুইজ", desc: "PDF, ছবি, YouTube বা ওয়েবসাইট বিশ্লেষণ করে প্রশ্ন তৈরি", action: () => setMode("custom") },
+          { title: "📋 কাস্টম কুইজ", desc: "অ্যাডমিনের তৈরি কুইজে অংশগ্রহণ করো", action: () => setMode("custom_exam_list") },
         ].map((item, i) => (
           <motion.div
             key={item.title}
@@ -548,8 +578,9 @@ const Quiz = () => {
             <p className="text-xs text-muted-foreground">{item.desc}</p>
             <div className="flex flex-wrap gap-1.5 pt-1">
               <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">MCQ</span>
-              <span className="text-[10px] bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">সংক্ষিপ্ত</span>
-              <span className="text-[10px] bg-accent/30 text-foreground px-2 py-0.5 rounded-full">বিশ্লেষণমূলক</span>
+              {i < 2 && <span className="text-[10px] bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">সংক্ষিপ্ত</span>}
+              {i < 2 && <span className="text-[10px] bg-accent/30 text-foreground px-2 py-0.5 rounded-full">বিশ্লেষণমূলক</span>}
+              {i === 2 && <span className="text-[10px] bg-accent/30 text-foreground px-2 py-0.5 rounded-full">অ্যাডমিন</span>}
             </div>
             <Button variant="ghost" size="sm" className="gap-1.5 text-primary">
               <Play className="w-3.5 h-3.5" /> শুরু করো
@@ -557,6 +588,15 @@ const Quiz = () => {
           </motion.div>
         ))}
       </div>
+
+      {/* Admin: create custom quiz button */}
+      {isAdmin && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Button variant="outline" className="w-full rounded-xl gap-2 border-dashed border-2" onClick={() => setMode("custom_exam_create")}>
+            <Shield className="w-4 h-4" /> অ্যাডমিন: নতুন কাস্টম কুইজ তৈরি করো
+          </Button>
+        </motion.div>
+      )}
     </div>
   );
 };
