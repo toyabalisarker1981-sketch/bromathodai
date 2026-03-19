@@ -36,14 +36,18 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { subject, classLevel, topic, customContent, questionCount, includeShortQuestions, includeAnalytical } = await req.json();
+    const { subject, classLevel, topic, customContent, questionCount, includeShortQuestions, includeAnalytical, questionType } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const count = questionCount || 5;
     const cls = classLevel || "10";
-    const wantShort = includeShortQuestions !== false;
-    const wantAnalytical = includeAnalytical !== false;
+    
+    // questionType: "mcq" | "sq" | "cq" | "all" (default)
+    const qType = questionType || "all";
+    const wantMCQ = qType === "mcq" || qType === "all";
+    const wantShort = (qType === "sq" || qType === "all") && includeShortQuestions !== false;
+    const wantAnalytical = (qType === "cq" || qType === "all") && includeAnalytical !== false;
 
     const shortCount = wantShort ? Math.max(2, Math.ceil(count * 0.4)) : 0;
     const analyticalCount = wantAnalytical ? Math.max(1, Math.ceil(count * 0.2)) : 0;
