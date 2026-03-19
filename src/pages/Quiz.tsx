@@ -212,7 +212,7 @@ const Quiz = () => {
           <div className="flex flex-wrap gap-2 justify-center pt-2">
             <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full">📖 MCQ</span>
             <span className="text-xs bg-secondary/10 text-secondary px-3 py-1 rounded-full">✍️ সংক্ষিপ্ত</span>
-            <span className="text-xs bg-accent/30 text-foreground px-3 py-1 rounded-full">💡 বিশ্লেষণমূলক</span>
+            <span className="text-xs bg-accent/30 text-foreground px-3 py-1 rounded-full">💡 সৃজনশীল</span>
           </div>
         </motion.div>
       </div>
@@ -253,7 +253,7 @@ const Quiz = () => {
           {analyticalQuestions.length > 0 && (
             <button onClick={() => setResultTab("analytical")}
               className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${resultTab === "analytical" ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"}`}>
-              <Lightbulb className="w-3.5 h-3.5" /> বিশ্লেষণমূলক ({analyticalQuestions.length})
+              <Lightbulb className="w-3.5 h-3.5" /> সৃজনশীল ({analyticalQuestions.length})
             </button>
           )}
         </div>
@@ -574,7 +574,7 @@ const Quiz = () => {
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <Brain className="w-6 h-6 text-secondary" /> কুইজ ইঞ্জিন
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">AI দিয়ে বোর্ড পরীক্ষার মানের MCQ, সংক্ষিপ্ত ও বিশ্লেষণমূলক প্রশ্ন 🎯</p>
+        <p className="text-sm text-muted-foreground mt-1">AI দিয়ে বোর্ড পরীক্ষার মানের MCQ, সংক্ষিপ্ত ও সৃজনশীল প্রশ্ন 🎯</p>
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -596,7 +596,7 @@ const Quiz = () => {
             <div className="flex flex-wrap gap-1.5 pt-1">
               <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">MCQ</span>
               {i < 2 && <span className="text-[10px] bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">সংক্ষিপ্ত</span>}
-              {i < 2 && <span className="text-[10px] bg-accent/30 text-foreground px-2 py-0.5 rounded-full">বিশ্লেষণমূলক</span>}
+              {i < 2 && <span className="text-[10px] bg-accent/30 text-foreground px-2 py-0.5 rounded-full">সৃজনশীল</span>}
               {i === 2 && <span className="text-[10px] bg-accent/30 text-foreground px-2 py-0.5 rounded-full">অ্যাডমিন</span>}
             </div>
             <Button variant="ghost" size="sm" className="gap-1.5 text-primary">
