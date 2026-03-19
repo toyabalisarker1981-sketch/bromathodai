@@ -515,18 +515,20 @@ const Quiz = () => {
           ))}
         </div>
 
-        <div className="glass-card rounded-xl p-4">
-          <label className="text-xs text-muted-foreground mb-1.5 block">কতগুলো MCQ চাও?</label>
-          <input
-            type="number"
-            min="1"
-            max="50"
-            value={customQuestionCount}
-            onChange={(e) => setCustomQuestionCount(e.target.value)}
-            placeholder="5"
-            className="w-full bg-muted/30 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
-          />
-          <p className="text-xs text-muted-foreground mt-1">* সাথে সংক্ষিপ্ত ও বিশ্লেষণমূলক প্রশ্নও তৈরি হবে</p>
+        <div className="glass-card rounded-xl p-4 space-y-3">
+          <QuestionTypeSelector value={questionType} onChange={setQuestionType} />
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 block">কতগুলো প্রশ্ন চাও?</label>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              value={customQuestionCount}
+              onChange={(e) => setCustomQuestionCount(e.target.value)}
+              placeholder="5"
+              className="w-full bg-muted/30 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
+            />
+          </div>
         </div>
 
         {(customSource === "pdf" || customSource === "image") ? (
