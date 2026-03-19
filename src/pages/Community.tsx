@@ -1051,13 +1051,14 @@ const Community = () => {
 };
 
 // Challenge Modal Component
-const ChallengeModal = ({ show, onClose, targetName, subject, setSubject, topic, setTopic, count, setCount, customContent, setCustomContent, sending, onSend, isGroup }: {
+const ChallengeModal = ({ show, onClose, targetName, subject, setSubject, topic, setTopic, count, setCount, customContent, setCustomContent, sending, onSend, isGroup, questionType, setQuestionType }: {
   show: boolean; onClose: () => void; targetName: string;
   subject: string; setSubject: (v: string) => void;
   topic: string; setTopic: (v: string) => void;
   count: number; setCount: (v: number) => void;
   customContent: string; setCustomContent: (v: string) => void;
   sending: boolean; onSend: () => void; isGroup?: boolean;
+  questionType: QuestionType; setQuestionType: (v: QuestionType) => void;
 }) => (
   <AnimatePresence>
     {show && (
@@ -1069,13 +1070,15 @@ const ChallengeModal = ({ show, onClose, targetName, subject, setSubject, topic,
             <h3 className="font-display font-bold">{isGroup ? "🏆 গ্রুপ চ্যালেঞ্জ" : "⚔️ 1v1 চ্যালেঞ্জ"}</h3>
             <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted/30"><X className="w-4 h-4" /></button>
           </div>
-          <p className="text-xs text-muted-foreground">{isGroup ? `${targetName} কে MCQ চ্যালেঞ্জ দাও` : `${targetName} কে MCQ চ্যালেঞ্জ পাঠাও`}</p>
+          <p className="text-xs text-muted-foreground">{isGroup ? `${targetName} কে চ্যালেঞ্জ দাও` : `${targetName} কে চ্যালেঞ্জ পাঠাও`}</p>
           <div className="space-y-3">
             <input type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder="বিষয় (যেমন: গণিত) *"
               className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 placeholder:text-muted-foreground" />
             <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="অধ্যায় (ঐচ্ছিক)"
               className="w-full bg-muted/30 rounded-xl px-4 py-2.5 text-sm outline-none border border-border/50 focus:border-primary/50 placeholder:text-muted-foreground" />
             
+            <QuestionTypeSelector value={questionType} onChange={setQuestionType} />
+
             {/* Custom content source */}
             <div>
               <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
