@@ -116,7 +116,7 @@ ${enrichedContent}
 বিষয়: ${subject || "সাধারণ"}
 ${topic ? `অধ্যায়/টপিক: ${topic}` : ""}
 
-NCTB (nctb.gov.bd) এর ক্লাস ${cls} এর "${subject}" বইয়ের ${topic ? `"${topic}" অধ্যায় থেকে` : "বিভিন্ন গুরুত্বপূর্ণ অধ্যায় থেকে"} ${count}টি MCQ${shortCount > 0 ? `, ${shortCount}টি সংক্ষিপ্ত প্রশ্ন` : ""}${analyticalCount > 0 ? ` এবং ${analyticalCount}টি বিশ্লেষণমূলক/সৃজনশীল প্রশ্ন` : ""} তৈরি করো।
+NCTB (nctb.gov.bd) এর ক্লাস ${cls} এর "${subject}" বইয়ের ${topic ? `"${topic}" অধ্যায় থেকে` : "বিভিন্ন গুরুত্বপূর্ণ অধ্যায় থেকে"} ${mcqCount > 0 ? `${mcqCount}টি MCQ` : ""}${mcqCount > 0 && shortCount > 0 ? ", " : ""}${shortCount > 0 ? `${shortCount}টি সংক্ষিপ্ত প্রশ্ন (SQ)` : ""}${(mcqCount > 0 || shortCount > 0) && analyticalCount > 0 ? " এবং " : ""}${analyticalCount > 0 ? `${analyticalCount}টি সৃজনশীল প্রশ্ন (CQ)` : ""} তৈরি করো।
 
 মনে রাখো:
 - NCTB পাঠ্যবই (nctb.gov.bd) এর ক্লাস ${cls} এর "${subject}" বই থেকে তথ্য নাও
