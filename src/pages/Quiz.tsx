@@ -9,6 +9,7 @@ import ChatMessageContent from "@/components/chat/ChatMessageContent";
 import { updateXpAndStreak, saveExamResult } from "@/lib/xpHelper";
 import CustomExamCreator from "@/components/custom-exam/CustomExamCreator";
 import CustomExamList from "@/components/custom-exam/CustomExamList";
+import QuestionTypeSelector from "@/components/QuestionTypeSelector";
 
 interface QuizQuestion {
   question: string;
