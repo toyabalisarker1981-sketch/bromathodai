@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Target, Play, CheckCircle2, XCircle, Loader2, Upload, Youtube, Globe, FileText, Image, ArrowLeft, Sparkles } from "lucide-react";
+import { Brain, Target, Play, CheckCircle2, XCircle, Loader2, Upload, Youtube, Globe, FileText, Image, ArrowLeft, Sparkles, BookOpen, Lightbulb, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,9 +15,21 @@ interface QuizQuestion {
   explanation: string;
 }
 
+interface ShortQuestion {
+  question: string;
+  answer: string;
+}
+
+interface AnalyticalQuestion {
+  question: string;
+  guidelines: string;
+  keyPoints: string[];
+}
+
 const GENERATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quiz`;
 
 type QuizMode = "select" | "subject" | "custom" | "generating" | "quiz" | "result";
+type ResultTab = "mcq" | "short" | "analytical";
 
 const Quiz = () => {
   const { user } = useAuth();
@@ -30,11 +42,16 @@ const Quiz = () => {
   const [customUrl, setCustomUrl] = useState("");
   const [customSource, setCustomSource] = useState<"pdf" | "image" | "youtube" | "web">("youtube");
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [shortQuestions, setShortQuestions] = useState<ShortQuestion[]>([]);
+  const [analyticalQuestions, setAnalyticalQuestions] = useState<AnalyticalQuestion[]>([]);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [resultTab, setResultTab] = useState<ResultTab>("mcq");
+  const [showShortAnswer, setShowShortAnswer] = useState<Record<number, boolean>>({});
+  const [showAnalyticalGuide, setShowAnalyticalGuide] = useState<Record<number, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -62,6 +79,8 @@ const Quiz = () => {
           topic: topicInput,
           customContent,
           questionCount: qCount,
+          includeShortQuestions: true,
+          includeAnalytical: true,
         }),
       });
 
@@ -70,12 +89,17 @@ const Quiz = () => {
 
       if (data.questions && data.questions.length > 0) {
         setQuestions(data.questions);
+        setShortQuestions(data.shortQuestions || []);
+        setAnalyticalQuestions(data.analyticalQuestions || []);
         setAnswers(new Array(data.questions.length).fill(null));
         setCurrentQ(0);
         setSelected(null);
         setShowExplanation(false);
+        setShowShortAnswer({});
+        setShowAnalyticalGuide({});
         setMode("quiz");
-        toast({ title: "কুইজ প্রস্তুত! 🎯" });
+        const totalQ = data.questions.length + (data.shortQuestions?.length || 0) + (data.analyticalQuestions?.length || 0);
+        toast({ title: `${totalQ}টি প্রশ্ন প্রস্তুত! 🎯` });
       } else {
         throw new Error("No questions generated");
       }
@@ -91,13 +115,19 @@ const Quiz = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const count = parseInt(customQuestionCount) || 5;
-    generateQuiz(`ফাইলের নাম: ${file.name}. এই বিষয় থেকে প্রশ্ন তৈরি করো।`, count);
+    
+    // Read the file content for better analysis
+    if (file.type === "application/pdf" || file.type.startsWith("image/")) {
+      generateQuiz(`ফাইলের নাম: ${file.name}. ফাইলের ধরন: ${file.type}. এই ফাইলের বিষয়বস্তু গভীরভাবে বিশ্লেষণ করে পরীক্ষার মানের প্রশ্ন তৈরি করো। কভার পেজ, সূচিপত্র, পৃষ্ঠা নম্বর, লেখক তথ্য উপেক্ষা করো — শুধুমাত্র মূল পাঠ্য বিষয়বস্তু থেকে প্রশ্ন করো।`, count);
+    } else {
+      generateQuiz(`ফাইলের নাম: ${file.name}. এই বিষয় থেকে পরীক্ষার মানের প্রশ্ন তৈরি করো।`, count);
+    }
   };
 
   const handleCustomGenerate = () => {
     if (!customUrl.trim()) return;
     const count = parseInt(customQuestionCount) || 5;
-    generateQuiz(`এই URL/কন্টেন্ট থেকে প্রশ্ন তৈরি করো: ${customUrl}`, count);
+    generateQuiz(`এই URL/কন্টেন্ট সম্পূর্ণ পড়ো এবং গভীরভাবে বিশ্লেষণ করো। শুধুমাত্র এই কন্টেন্টের মূল একাডেমিক বিষয়বস্তু থেকে বোর্ড পরীক্ষার মানের প্রশ্ন তৈরি করো: ${customUrl}`, count);
   };
 
   const submitAnswer = () => {
@@ -120,16 +150,13 @@ const Quiz = () => {
 
   const finishQuiz = async () => {
     setMode("result");
+    setResultTab("mcq");
     if (!user) return;
     try {
       const correctCount = answers.filter((a, i) => a === questions[i]?.correctIndex).length;
       const xpEarned = correctCount * 10 + questions.length * 2;
       const accuracy = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
-
-      // Save quiz result
       await saveExamResult(user.id, questions.length, correctCount, accuracy, answers);
-
-      // Update XP with proper daily streak
       const result = await updateXpAndStreak(user.id, xpEarned);
       if (result) {
         toast({ title: `+${result.xpEarned} XP অর্জন! 🎉`, description: `লেভেল ${result.level} · স্ট্রিক ${result.streak_days} দিন` });
@@ -147,13 +174,19 @@ const Quiz = () => {
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card rounded-2xl p-10 text-center space-y-4">
           <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" />
           <h2 className="font-display font-bold text-lg">AI কুইজ তৈরি হচ্ছে...</h2>
-          <p className="text-sm text-muted-foreground">NCTB সিলেবাস অনুযায়ী প্রশ্ন জেনারেট করা হচ্ছে</p>
+          <p className="text-sm text-muted-foreground">কন্টেন্ট বিশ্লেষণ করে বোর্ড পরীক্ষার মানের প্রশ্ন তৈরি হচ্ছে</p>
+          <div className="flex flex-wrap gap-2 justify-center pt-2">
+            <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full">📖 MCQ</span>
+            <span className="text-xs bg-secondary/10 text-secondary px-3 py-1 rounded-full">✍️ সংক্ষিপ্ত</span>
+            <span className="text-xs bg-accent/30 text-foreground px-3 py-1 rounded-full">💡 বিশ্লেষণমূলক</span>
+          </div>
         </motion.div>
       </div>
     );
   }
 
   if (mode === "result") {
+    const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
     return (
       <div className="p-4 lg:p-8 max-w-2xl mx-auto space-y-4">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card rounded-2xl p-8 text-center space-y-6">
@@ -162,37 +195,124 @@ const Quiz = () => {
           </div>
           <div>
             <h2 className="text-3xl font-display font-bold gradient-text">{score}/{questions.length}</h2>
-            <p className="text-muted-foreground mt-1">
-              {score === questions.length ? "পারফেক্ট! তুমি দারুণ! 🎉" :
-               score >= questions.length * 0.7 ? "অসাধারণ! আরো একটু প্র্যাকটিস করো! 💪" :
+            <p className="text-lg text-muted-foreground">{percentage}% সঠিক</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {percentage >= 80 ? "পারফেক্ট! তুমি দারুণ! 🎉" :
+               percentage >= 50 ? "অসাধারণ! আরো একটু প্র্যাকটিস করো! 💪" :
                "চালিয়ে যাও! প্র্যাকটিস করলে আরো ভালো করবে! 📚"}
             </p>
           </div>
-          <div className="space-y-3 text-left max-h-[400px] overflow-y-auto scrollbar-hidden">
+        </motion.div>
+
+        {/* Tabs for question types */}
+        <div className="flex gap-2">
+          <button onClick={() => setResultTab("mcq")}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${resultTab === "mcq" ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"}`}>
+            <BookOpen className="w-3.5 h-3.5" /> MCQ ({questions.length})
+          </button>
+          {shortQuestions.length > 0 && (
+            <button onClick={() => setResultTab("short")}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${resultTab === "short" ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"}`}>
+              <HelpCircle className="w-3.5 h-3.5" /> সংক্ষিপ্ত ({shortQuestions.length})
+            </button>
+          )}
+          {analyticalQuestions.length > 0 && (
+            <button onClick={() => setResultTab("analytical")}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${resultTab === "analytical" ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted/30 text-muted-foreground"}`}>
+              <Lightbulb className="w-3.5 h-3.5" /> বিশ্লেষণমূলক ({analyticalQuestions.length})
+            </button>
+          )}
+        </div>
+
+        {/* MCQ Review */}
+        {resultTab === "mcq" && (
+          <div className="space-y-3 max-h-[400px] overflow-y-auto scrollbar-hidden">
             {questions.map((q, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-muted/20">
-                {answers[i] === q.correctIndex ? (
-                  <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                ) : (
-                  <XCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                )}
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{q.question}</p>
-                  <p className="text-xs text-primary mt-1">✅ {q.options[q.correctIndex]}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{q.explanation}</p>
+              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                className="glass-card rounded-xl p-4 space-y-2">
+                <div className="flex items-start gap-2">
+                  {answers[i] === q.correctIndex ? (
+                    <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                  )}
+                  <p className="text-sm font-medium">{i + 1}. {q.question}</p>
                 </div>
-              </div>
+                <p className="text-xs text-primary ml-7">✅ সঠিক: {q.options[q.correctIndex]}</p>
+                {answers[i] !== null && answers[i] !== q.correctIndex && (
+                  <p className="text-xs text-destructive ml-7">❌ তোমার উত্তর: {q.options[answers[i]!]}</p>
+                )}
+                <div className="ml-7 p-2 rounded-lg bg-muted/20">
+                  <p className="text-xs text-muted-foreground">💡 {q.explanation}</p>
+                </div>
+              </motion.div>
             ))}
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setMode("select")}>
-              <ArrowLeft className="w-4 h-4 mr-2" /> মেনু
-            </Button>
-            <Button variant="glow" className="flex-1 rounded-xl" onClick={() => generateQuiz()}>
-              <Sparkles className="w-4 h-4 mr-2" /> আবার কুইজ
-            </Button>
+        )}
+
+        {/* Short Questions */}
+        {resultTab === "short" && (
+          <div className="space-y-3 max-h-[400px] overflow-y-auto scrollbar-hidden">
+            {shortQuestions.map((q, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                className="glass-card rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold">📝 {i + 1}. {q.question}</p>
+                <button
+                  onClick={() => setShowShortAnswer(prev => ({ ...prev, [i]: !prev[i] }))}
+                  className="text-xs text-primary font-medium hover:underline"
+                >
+                  {showShortAnswer[i] ? "উত্তর লুকাও" : "✅ আদর্শ উত্তর দেখো"}
+                </button>
+                {showShortAnswer[i] && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                    className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                    <p className="text-sm text-foreground">{q.answer}</p>
+                  </motion.div>
+                )}
+              </motion.div>
+            ))}
           </div>
-        </motion.div>
+        )}
+
+        {/* Analytical Questions */}
+        {resultTab === "analytical" && (
+          <div className="space-y-3 max-h-[400px] overflow-y-auto scrollbar-hidden">
+            {analyticalQuestions.map((q, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                className="glass-card rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold">💡 {i + 1}. {q.question}</p>
+                <button
+                  onClick={() => setShowAnalyticalGuide(prev => ({ ...prev, [i]: !prev[i] }))}
+                  className="text-xs text-primary font-medium hover:underline"
+                >
+                  {showAnalyticalGuide[i] ? "গাইডলাইন লুকাও" : "📖 উত্তরের গাইডলাইন দেখো"}
+                </button>
+                {showAnalyticalGuide[i] && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                    className="p-3 rounded-lg bg-accent/10 border border-accent/20 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">📋 নির্দেশনা:</p>
+                    <p className="text-sm">{q.guidelines}</p>
+                    <p className="text-xs font-medium text-muted-foreground mt-2">🔑 মূল পয়েন্ট:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      {q.keyPoints.map((point, pi) => (
+                        <li key={pi} className="text-xs text-foreground/80">{point}</li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setMode("select")}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> মেনু
+          </Button>
+          <Button variant="glow" className="flex-1 rounded-xl" onClick={() => generateQuiz()}>
+            <Sparkles className="w-4 h-4 mr-2" /> আবার কুইজ
+          </Button>
+        </div>
       </div>
     );
   }
@@ -273,7 +393,7 @@ const Quiz = () => {
           </button>
           <div>
             <h1 className="text-xl font-display font-bold">বিষয়ভিত্তিক কুইজ</h1>
-            <p className="text-xs text-muted-foreground">ক্লাস {studentClass} · NCTB সিলেবাস</p>
+            <p className="text-xs text-muted-foreground">ক্লাস {studentClass} · NCTB সিলেবাস · বোর্ড পরীক্ষার মান</p>
           </div>
         </motion.div>
 
@@ -301,7 +421,7 @@ const Quiz = () => {
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">কতগুলো প্রশ্ন চাও?</label>
+            <label className="text-xs text-muted-foreground mb-1.5 block">কতগুলো MCQ চাও?</label>
             <input
               type="number"
               min="1"
@@ -311,6 +431,7 @@ const Quiz = () => {
               placeholder="5"
               className="w-full bg-muted/30 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
             />
+            <p className="text-xs text-muted-foreground mt-1">* সাথে সংক্ষিপ্ত ও বিশ্লেষণমূলক প্রশ্নও তৈরি হবে</p>
           </div>
 
           <Button
@@ -336,7 +457,7 @@ const Quiz = () => {
           </button>
           <div>
             <h1 className="text-xl font-display font-bold">কাস্টম সোর্স থেকে কুইজ</h1>
-            <p className="text-xs text-muted-foreground">PDF, ছবি, YouTube বা ওয়েবসাইট থেকে কুইজ তৈরি করো</p>
+            <p className="text-xs text-muted-foreground">PDF, ছবি, YouTube বা ওয়েবসাইট থেকে বোর্ড মানের প্রশ্ন তৈরি</p>
           </div>
         </motion.div>
 
@@ -360,7 +481,7 @@ const Quiz = () => {
         </div>
 
         <div className="glass-card rounded-xl p-4">
-          <label className="text-xs text-muted-foreground mb-1.5 block">কতগুলো প্রশ্ন চাও?</label>
+          <label className="text-xs text-muted-foreground mb-1.5 block">কতগুলো MCQ চাও?</label>
           <input
             type="number"
             min="1"
@@ -370,6 +491,7 @@ const Quiz = () => {
             placeholder="5"
             className="w-full bg-muted/30 rounded-xl px-4 py-3 text-sm outline-none border border-border/50 focus:border-primary/50 transition-colors placeholder:text-muted-foreground"
           />
+          <p className="text-xs text-muted-foreground mt-1">* সাথে সংক্ষিপ্ত ও বিশ্লেষণমূলক প্রশ্নও তৈরি হবে</p>
         </div>
 
         {(customSource === "pdf" || customSource === "image") ? (
@@ -378,7 +500,7 @@ const Quiz = () => {
             <label htmlFor="quiz-file" className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-border/50 rounded-xl cursor-pointer hover:border-primary/40 transition-colors bg-muted/10">
               <Upload className="w-8 h-8 text-muted-foreground" />
               <p className="text-sm font-medium">{customSource === "pdf" ? "PDF আপলোড করো" : "ছবি আপলোড করো"}</p>
-              <p className="text-xs text-muted-foreground">AI অটোমেটিক কুইজ তৈরি করবে</p>
+              <p className="text-xs text-muted-foreground">AI কন্টেন্ট বিশ্লেষণ করে বোর্ড মানের প্রশ্ন তৈরি করবে</p>
             </label>
           </div>
         ) : (
@@ -406,13 +528,13 @@ const Quiz = () => {
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <Brain className="w-6 h-6 text-secondary" /> কুইজ ইঞ্জিন
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">AI দিয়ে NCTB সিলেবাস অনুযায়ী কুইজ দাও — সম্পূর্ণ ফ্রি! 🎯</p>
+        <p className="text-sm text-muted-foreground mt-1">AI দিয়ে বোর্ড পরীক্ষার মানের MCQ, সংক্ষিপ্ত ও বিশ্লেষণমূলক প্রশ্ন 🎯</p>
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
-          { title: "📚 NCTB বিষয়ভিত্তিক কুইজ", desc: "বিষয় ও অধ্যায়ের নাম লিখে AI কুইজ জেনারেট করো", action: () => setMode("subject"), color: "primary" },
-          { title: "📎 কাস্টম সোর্স থেকে কুইজ", desc: "PDF, ছবি, YouTube বা ওয়েবসাইট থেকে কুইজ তৈরি করো", action: () => setMode("custom"), color: "secondary" },
+          { title: "📚 NCTB বিষয়ভিত্তিক কুইজ", desc: "বিষয় ও অধ্যায়ের নাম দিয়ে বোর্ড মানের প্রশ্ন জেনারেট করো", action: () => setMode("subject"), color: "primary" },
+          { title: "📎 কাস্টম সোর্স থেকে কুইজ", desc: "PDF, ছবি, YouTube বা ওয়েবসাইট বিশ্লেষণ করে প্রশ্ন তৈরি", action: () => setMode("custom"), color: "secondary" },
         ].map((item, i) => (
           <motion.div
             key={item.title}
@@ -424,6 +546,11 @@ const Quiz = () => {
           >
             <h3 className="font-display font-semibold text-base">{item.title}</h3>
             <p className="text-xs text-muted-foreground">{item.desc}</p>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">MCQ</span>
+              <span className="text-[10px] bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">সংক্ষিপ্ত</span>
+              <span className="text-[10px] bg-accent/30 text-foreground px-2 py-0.5 rounded-full">বিশ্লেষণমূলক</span>
+            </div>
             <Button variant="ghost" size="sm" className="gap-1.5 text-primary">
               <Play className="w-3.5 h-3.5" /> শুরু করো
             </Button>
