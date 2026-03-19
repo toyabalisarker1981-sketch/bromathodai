@@ -36,17 +36,22 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { subject, classLevel, topic, customContent, questionCount, includeShortQuestions, includeAnalytical } = await req.json();
+    const { subject, classLevel, topic, customContent, questionCount, includeShortQuestions, includeAnalytical, questionType } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const count = questionCount || 5;
     const cls = classLevel || "10";
-    const wantShort = includeShortQuestions !== false;
-    const wantAnalytical = includeAnalytical !== false;
+    
+    // questionType: "mcq" | "sq" | "cq" | "all" (default)
+    const qType = questionType || "all";
+    const wantMCQ = qType === "mcq" || qType === "all";
+    const wantShort = (qType === "sq" || qType === "all") && includeShortQuestions !== false;
+    const wantAnalytical = (qType === "cq" || qType === "all") && includeAnalytical !== false;
 
-    const shortCount = wantShort ? Math.max(2, Math.ceil(count * 0.4)) : 0;
-    const analyticalCount = wantAnalytical ? Math.max(1, Math.ceil(count * 0.2)) : 0;
+    const mcqCount = wantMCQ ? count : 0;
+    const shortCount = wantShort ? (qType === "sq" ? count : Math.max(2, Math.ceil(count * 0.4))) : 0;
+    const analyticalCount = wantAnalytical ? (qType === "cq" ? Math.max(3, Math.ceil(count * 0.5)) : Math.max(1, Math.ceil(count * 0.2))) : 0;
 
     const strictRules = `
 তুমি একজন অত্যন্ত কঠোর ও নির্ভুল পরীক্ষার প্রশ্ন প্রণেতা।
@@ -103,7 +108,7 @@ ${topic ? `অধ্যায়/টপিক: ${topic}` : ""}
 কন্টেন্ট:
 ${enrichedContent}
 
-এই কন্টেন্ট থেকে ${count}টি MCQ${shortCount > 0 ? `, ${shortCount}টি সংক্ষিপ্ত প্রশ্ন` : ""}${analyticalCount > 0 ? ` এবং ${analyticalCount}টি বিশ্লেষণমূলক/সৃজনশীল প্রশ্ন` : ""} তৈরি করো।`;
+এই কন্টেন্ট থেকে ${mcqCount > 0 ? `${mcqCount}টি MCQ` : ""}${mcqCount > 0 && shortCount > 0 ? ", " : ""}${shortCount > 0 ? `${shortCount}টি সংক্ষিপ্ত প্রশ্ন (SQ)` : ""}${(mcqCount > 0 || shortCount > 0) && analyticalCount > 0 ? " এবং " : ""}${analyticalCount > 0 ? `${analyticalCount}টি সৃজনশীল প্রশ্ন (CQ)` : ""} তৈরি করো।`;
     } else {
       prompt = `${strictRules}
 
@@ -111,7 +116,7 @@ ${enrichedContent}
 বিষয়: ${subject || "সাধারণ"}
 ${topic ? `অধ্যায়/টপিক: ${topic}` : ""}
 
-NCTB (nctb.gov.bd) এর ক্লাস ${cls} এর "${subject}" বইয়ের ${topic ? `"${topic}" অধ্যায় থেকে` : "বিভিন্ন গুরুত্বপূর্ণ অধ্যায় থেকে"} ${count}টি MCQ${shortCount > 0 ? `, ${shortCount}টি সংক্ষিপ্ত প্রশ্ন` : ""}${analyticalCount > 0 ? ` এবং ${analyticalCount}টি বিশ্লেষণমূলক/সৃজনশীল প্রশ্ন` : ""} তৈরি করো।
+NCTB (nctb.gov.bd) এর ক্লাস ${cls} এর "${subject}" বইয়ের ${topic ? `"${topic}" অধ্যায় থেকে` : "বিভিন্ন গুরুত্বপূর্ণ অধ্যায় থেকে"} ${mcqCount > 0 ? `${mcqCount}টি MCQ` : ""}${mcqCount > 0 && shortCount > 0 ? ", " : ""}${shortCount > 0 ? `${shortCount}টি সংক্ষিপ্ত প্রশ্ন (SQ)` : ""}${(mcqCount > 0 || shortCount > 0) && analyticalCount > 0 ? " এবং " : ""}${analyticalCount > 0 ? `${analyticalCount}টি সৃজনশীল প্রশ্ন (CQ)` : ""} তৈরি করো।
 
 মনে রাখো:
 - NCTB পাঠ্যবই (nctb.gov.bd) এর ক্লাস ${cls} এর "${subject}" বই থেকে তথ্য নাও
@@ -137,9 +142,12 @@ ${analyticalCount > 0 ? `বিশ্লেষণমূলক/সৃজনশী
 - নির্দেশনা/গাইডলাইন (কীভাবে উত্তর লিখতে হবে)
 - মূল পয়েন্টগুলো যা উত্তরে থাকা উচিত` : ""}`;
 
-    // Build tools with conditional short/analytical question schemas
-    const toolProperties: Record<string, any> = {
-      questions: {
+    // Build tools with conditional question type schemas
+    const toolProperties: Record<string, any> = {};
+    const requiredFields: string[] = [];
+
+    if (wantMCQ) {
+      toolProperties.questions = {
         type: "array",
         description: "MCQ questions",
         items: {
@@ -153,10 +161,9 @@ ${analyticalCount > 0 ? `বিশ্লেষণমূলক/সৃজনশী
           required: ["question", "options", "correctIndex", "explanation"],
           additionalProperties: false,
         },
-      },
-    };
-
-    const requiredFields = ["questions"];
+      };
+      requiredFields.push("questions");
+    }
 
     if (shortCount > 0) {
       toolProperties.shortQuestions = {
