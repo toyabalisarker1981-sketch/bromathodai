@@ -53,6 +53,8 @@ const Community = () => {
   const [challengeAnswers, setChallengeAnswers] = useState<(number | null)[]>([]);
   const [challengeCurrentQ, setChallengeCurrentQ] = useState(0);
   const [challengeMode, setChallengeMode] = useState<"idle" | "taking" | "result">("idle");
+  const [challengeQuestionType, setChallengeQuestionType] = useState<QuestionType>("mcq");
+  const [groupChallengeQuestionType, setGroupChallengeQuestionType] = useState<QuestionType>("mcq");
 
   // Group state
   const [showInviteModal, setShowInviteModal] = useState<string | null>(null);
