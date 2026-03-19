@@ -789,6 +789,8 @@ const Community = () => {
           setCustomContent={setChallengeCustomContent}
           sending={sendingChallenge}
           onSend={sendChallenge}
+          questionType={challengeQuestionType}
+          setQuestionType={setChallengeQuestionType}
         />
       </div>
     );
